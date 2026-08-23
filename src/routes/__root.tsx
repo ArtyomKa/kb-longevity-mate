@@ -13,6 +13,7 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { TabBar } from "@/components/kb/TabBar";
 import { Toaster } from "@/components/ui/sonner";
+import { setupPwa } from "@/lib/pwa";
 
 function NotFoundComponent() {
   return (
@@ -99,7 +100,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         rel: "stylesheet",
         href: appCss,
       },
-      { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
+      { rel: "icon", type: "image/png", href: "/favicon.png" },
+      { rel: "apple-touch-icon", href: "/icon-192.png" },
       { rel: "manifest", href: "/manifest.webmanifest" },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
@@ -133,9 +135,7 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
   useEffect(() => {
-    if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("/sw.js").catch(() => undefined);
-    }
+    setupPwa();
   }, []);
 
   return (
@@ -145,7 +145,7 @@ function RootComponent() {
         <Outlet />
       </div>
       <TabBar />
-      <Toaster position="top-center" />
+      <Toaster position="top-center" theme="dark" />
     </QueryClientProvider>
   );
 }

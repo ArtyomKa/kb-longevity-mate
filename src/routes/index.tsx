@@ -79,10 +79,21 @@ function WorkoutPage() {
     );
   };
 
+  const patchProgress = (id: string, patch: Partial<Progress>) =>
+    setProgress((p) => ({
+      ...p,
+      [id]: { ...(p[id] ?? { completed: 0, skipped: 0, rpe: null, weightKg: null }), ...patch },
+    }));
+
   const bump = (kind: "completed" | "skipped") => {
     if (!exercise) return;
-    const current = progress[exercise.id];
-    const next = { ...current, [kind]: current[kind] + 1 };
+    const current: Progress = progress[exercise.id] ?? {
+      completed: 0,
+      skipped: 0,
+      rpe: null,
+      weightKg: null,
+    };
+    const next: Progress = { ...current, [kind]: current[kind] + 1 };
     setProgress((p) => ({ ...p, [exercise.id]: next }));
     if (settings.hapticsEnabled) buzz(kind === "completed" ? 45 : 20);
 
@@ -177,7 +188,7 @@ function WorkoutPage() {
               max={10}
               step={1}
               value={[bio.energy]}
-              onValueChange={([v]) => setBio({ ...bio, energy: v })}
+              onValueChange={([v]) => setBio({ ...bio, energy: v ?? bio.energy })}
             />
           </div>
 
@@ -307,7 +318,7 @@ function WorkoutPage() {
               onClick={() => {
                 const cur = prog?.weightKg;
                 const next = cur === settings.lightWeight ? settings.heavyWeight : settings.lightWeight;
-                setProgress((p) => ({ ...p, [exercise.id]: { ...p[exercise.id], weightKg: next } }));
+                patchProgress(exercise.id, { weightKg: next });
                 if (settings.hapticsEnabled) buzz(25);
               }}
               className="mt-4 flex h-14 w-full items-center justify-center gap-2 rounded-xl bg-secondary text-base font-bold text-secondary-foreground active:scale-[0.99]"
@@ -323,7 +334,7 @@ function WorkoutPage() {
                   <button
                     key={n}
                     onClick={() =>
-                      setProgress((p) => ({ ...p, [exercise.id]: { ...p[exercise.id], rpe: n } }))
+                      patchProgress(exercise.id, { rpe: n })
                     }
                     className={`h-11 flex-1 rounded-lg text-sm font-bold ${
                       prog?.rpe === n
