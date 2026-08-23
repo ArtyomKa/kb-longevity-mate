@@ -145,7 +145,7 @@ function RootComponent() {
         <Outlet />
       </div>
       <TabBar />
-      <Toaster position="top-center" />
+      <Toaster position="top-center" theme="dark" />
     </QueryClientProvider>
   );
 }
