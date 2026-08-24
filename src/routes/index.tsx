@@ -93,7 +93,14 @@ function WorkoutPage() {
     setMetronome(settings.metronomeEnabled);
     setProgress(
       Object.fromEntries(
-        t.exercises.map((e) => [e.id, { completed: 0, skipped: 0, rpe: null, weightKg: e.weightKg ?? null }]),
+        t.exercises.map((e) => [
+          e.id,
+          {
+            ...emptyProgress(),
+            weightKg: e.weightKg ?? null,
+            repInput: targetReps(e.reps),
+          },
+        ]),
       ),
     );
   };
@@ -101,18 +108,20 @@ function WorkoutPage() {
   const patchProgress = (id: string, patch: Partial<Progress>) =>
     setProgress((p) => ({
       ...p,
-      [id]: { ...(p[id] ?? { completed: 0, skipped: 0, rpe: null, weightKg: null }), ...patch },
+      [id]: { ...(p[id] ?? emptyProgress()), ...patch },
     }));
 
   const bump = (kind: "completed" | "skipped") => {
     if (!exercise) return;
-    const current: Progress = progress[exercise.id] ?? {
-      completed: 0,
-      skipped: 0,
-      rpe: null,
-      weightKg: null,
+    const current: Progress = progress[exercise.id] ?? emptyProgress();
+    const next: Progress = {
+      ...current,
+      [kind]: current[kind] + 1,
+      repsDone:
+        kind === "completed" && exercise.kind === "reps"
+          ? [...current.repsDone, current.repInput]
+          : current.repsDone,
     };
-    const next: Progress = { ...current, [kind]: current[kind] + 1 };
     setProgress((p) => ({ ...p, [exercise.id]: next }));
     if (settings.hapticsEnabled) buzz(kind === "completed" ? 45 : 20);
 
