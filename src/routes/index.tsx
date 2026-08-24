@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Check, ChevronRight, Repeat, SkipForward, Timer, X } from "lucide-react";
+import { Check, ChevronRight, Minus, Plus, Repeat, SkipForward, Timer, X } from "lucide-react";
 import { useLogs, useSettings, useTemplates } from "@/lib/kb-store";
 import type { Biofeedback, LoggedSet, Template, WorkoutLog } from "@/lib/kb-types";
 import { RestTimer } from "@/components/kb/RestTimer";
@@ -33,7 +33,26 @@ interface Progress {
   skipped: number;
   rpe: number | null;
   weightKg: number | null;
+  /** reps recorded per completed set */
+  repsDone: number[];
+  /** current rep counter value for the set in progress */
+  repInput: number;
 }
+
+/** pull a sensible starting rep count out of a template string like "12-15" or "10 marches" */
+function targetReps(reps?: string) {
+  const m = reps?.match(/\d+/);
+  return m ? Number(m[0]) : 10;
+}
+
+const emptyProgress = (): Progress => ({
+  completed: 0,
+  skipped: 0,
+  rpe: null,
+  weightKg: null,
+  repsDone: [],
+  repInput: 10,
+});
 
 function WorkoutPage() {
   const [templates] = useTemplates();
@@ -74,7 +93,14 @@ function WorkoutPage() {
     setMetronome(settings.metronomeEnabled);
     setProgress(
       Object.fromEntries(
-        t.exercises.map((e) => [e.id, { completed: 0, skipped: 0, rpe: null, weightKg: e.weightKg ?? null }]),
+        t.exercises.map((e) => [
+          e.id,
+          {
+            ...emptyProgress(),
+            weightKg: e.weightKg ?? null,
+            repInput: targetReps(e.reps),
+          },
+        ]),
       ),
     );
   };
@@ -82,18 +108,20 @@ function WorkoutPage() {
   const patchProgress = (id: string, patch: Partial<Progress>) =>
     setProgress((p) => ({
       ...p,
-      [id]: { ...(p[id] ?? { completed: 0, skipped: 0, rpe: null, weightKg: null }), ...patch },
+      [id]: { ...(p[id] ?? emptyProgress()), ...patch },
     }));
 
   const bump = (kind: "completed" | "skipped") => {
     if (!exercise) return;
-    const current: Progress = progress[exercise.id] ?? {
-      completed: 0,
-      skipped: 0,
-      rpe: null,
-      weightKg: null,
+    const current: Progress = progress[exercise.id] ?? emptyProgress();
+    const next: Progress = {
+      ...current,
+      [kind]: current[kind] + 1,
+      repsDone:
+        kind === "completed" && exercise.kind === "reps"
+          ? [...current.repsDone, current.repInput]
+          : current.repsDone,
     };
-    const next: Progress = { ...current, [kind]: current[kind] + 1 };
     setProgress((p) => ({ ...p, [exercise.id]: next }));
     if (settings.hapticsEnabled) buzz(kind === "completed" ? 45 : 20);
 
@@ -114,6 +142,7 @@ function WorkoutPage() {
         exerciseName: e.name + (e.perSide ? " (per side)" : ""),
         weightKg: p?.weightKg ?? null,
         reps: e.kind === "timed" ? `${Math.round((e.durationSec ?? 0) / 60)} min` : (e.reps ?? ""),
+        repsDone: p?.repsDone ?? [],
         setsPlanned: e.sets,
         setsCompleted: p?.completed ?? 0,
         setsSkipped: p?.skipped ?? 0,
@@ -327,8 +356,61 @@ function WorkoutPage() {
               {prog?.weightKg === settings.lightWeight ? settings.heavyWeight : settings.lightWeight} kg
             </button>
 
+            {exercise.kind === "reps" && (
+              <div className="mt-5">
+                <div className="flex items-baseline justify-between">
+                  <p className="text-xs uppercase tracking-widest text-muted-foreground">
+                    Reps this set{exercise.perSide ? " (per side)" : ""}
+                  </p>
+                  <p className="text-xs text-muted-foreground">target {exercise.reps}</p>
+                </div>
+                <div className="mt-2 flex items-center gap-3">
+                  <button
+                    onClick={() => {
+                      patchProgress(exercise.id, {
+                        repInput: Math.max(0, (prog?.repInput ?? targetReps(exercise.reps)) - 1),
+                      });
+                      if (settings.hapticsEnabled) buzz(15);
+                    }}
+                    className="flex h-16 w-16 items-center justify-center rounded-xl bg-secondary text-secondary-foreground active:scale-95"
+                    aria-label="Decrease reps"
+                  >
+                    <Minus className="size-7" />
+                  </button>
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    value={prog?.repInput ?? targetReps(exercise.reps)}
+                    onChange={(e) =>
+                      patchProgress(exercise.id, {
+                        repInput: Math.max(0, Number(e.target.value) || 0),
+                      })
+                    }
+                    className="tabular h-16 min-w-0 flex-1 rounded-xl bg-muted text-center font-display text-4xl font-bold outline-none focus:ring-2 focus:ring-primary"
+                  />
+                  <button
+                    onClick={() => {
+                      patchProgress(exercise.id, {
+                        repInput: (prog?.repInput ?? targetReps(exercise.reps)) + 1,
+                      });
+                      if (settings.hapticsEnabled) buzz(15);
+                    }}
+                    className="flex h-16 w-16 items-center justify-center rounded-xl bg-secondary text-secondary-foreground active:scale-95"
+                    aria-label="Increase reps"
+                  >
+                    <Plus className="size-7" />
+                  </button>
+                </div>
+                {prog?.repsDone.length ? (
+                  <p className="tabular mt-2 text-xs text-muted-foreground">
+                    Logged sets: {prog.repsDone.join(" · ")}
+                  </p>
+                ) : null}
+              </div>
+            )}
+
             <div className="mt-4">
-              <p className="text-xs uppercase tracking-widest text-muted-foreground">RPE</p>
+              <p className="text-xs uppercase tracking-widest text-muted-foreground">RPE (how hard it felt, 1–10)</p>
               <div className="mt-2 flex gap-1">
                 {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
                   <button
