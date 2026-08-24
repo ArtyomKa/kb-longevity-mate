@@ -356,8 +356,61 @@ function WorkoutPage() {
               {prog?.weightKg === settings.lightWeight ? settings.heavyWeight : settings.lightWeight} kg
             </button>
 
+            {exercise.kind === "reps" && (
+              <div className="mt-5">
+                <div className="flex items-baseline justify-between">
+                  <p className="text-xs uppercase tracking-widest text-muted-foreground">
+                    Reps this set{exercise.perSide ? " (per side)" : ""}
+                  </p>
+                  <p className="text-xs text-muted-foreground">target {exercise.reps}</p>
+                </div>
+                <div className="mt-2 flex items-center gap-3">
+                  <button
+                    onClick={() => {
+                      patchProgress(exercise.id, {
+                        repInput: Math.max(0, (prog?.repInput ?? targetReps(exercise.reps)) - 1),
+                      });
+                      if (settings.hapticsEnabled) buzz(15);
+                    }}
+                    className="flex h-16 w-16 items-center justify-center rounded-xl bg-secondary text-secondary-foreground active:scale-95"
+                    aria-label="Decrease reps"
+                  >
+                    <Minus className="size-7" />
+                  </button>
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    value={prog?.repInput ?? targetReps(exercise.reps)}
+                    onChange={(e) =>
+                      patchProgress(exercise.id, {
+                        repInput: Math.max(0, Number(e.target.value) || 0),
+                      })
+                    }
+                    className="tabular h-16 min-w-0 flex-1 rounded-xl bg-muted text-center font-display text-4xl font-bold outline-none focus:ring-2 focus:ring-primary"
+                  />
+                  <button
+                    onClick={() => {
+                      patchProgress(exercise.id, {
+                        repInput: (prog?.repInput ?? targetReps(exercise.reps)) + 1,
+                      });
+                      if (settings.hapticsEnabled) buzz(15);
+                    }}
+                    className="flex h-16 w-16 items-center justify-center rounded-xl bg-secondary text-secondary-foreground active:scale-95"
+                    aria-label="Increase reps"
+                  >
+                    <Plus className="size-7" />
+                  </button>
+                </div>
+                {prog?.repsDone.length ? (
+                  <p className="tabular mt-2 text-xs text-muted-foreground">
+                    Logged sets: {prog.repsDone.join(" · ")}
+                  </p>
+                ) : null}
+              </div>
+            )}
+
             <div className="mt-4">
-              <p className="text-xs uppercase tracking-widest text-muted-foreground">RPE</p>
+              <p className="text-xs uppercase tracking-widest text-muted-foreground">RPE (how hard it felt, 1–10)</p>
               <div className="mt-2 flex gap-1">
                 {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
                   <button
