@@ -88,7 +88,8 @@ function HistoryPage() {
                       <li key={i} className="flex items-center justify-between gap-2">
                         <span className="text-foreground">{e.exerciseName}</span>
                         <span className="tabular shrink-0 text-muted-foreground">
-                          {e.setsCompleted}/{e.setsPlanned} × {e.reps || "-"}
+                          {e.setsCompleted}/{e.setsPlanned} ×{" "}
+                          {e.repsDone?.length ? e.repsDone.join("/") : e.reps || "-"}
                           {e.weightKg ? ` @ ${e.weightKg}kg` : ""}
                           {e.rpe ? ` · RPE ${e.rpe}` : ""}
                         </span>
