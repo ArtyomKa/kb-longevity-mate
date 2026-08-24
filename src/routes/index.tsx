@@ -142,6 +142,7 @@ function WorkoutPage() {
         exerciseName: e.name + (e.perSide ? " (per side)" : ""),
         weightKg: p?.weightKg ?? null,
         reps: e.kind === "timed" ? `${Math.round((e.durationSec ?? 0) / 60)} min` : (e.reps ?? ""),
+        repsDone: p?.repsDone ?? [],
         setsPlanned: e.sets,
         setsCompleted: p?.completed ?? 0,
         setsSkipped: p?.skipped ?? 0,
