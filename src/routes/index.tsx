@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Check, ChevronRight, Repeat, SkipForward, Timer, X } from "lucide-react";
+import { Check, ChevronRight, Minus, Plus, Repeat, SkipForward, Timer, X } from "lucide-react";
 import { useLogs, useSettings, useTemplates } from "@/lib/kb-store";
 import type { Biofeedback, LoggedSet, Template, WorkoutLog } from "@/lib/kb-types";
 import { RestTimer } from "@/components/kb/RestTimer";
