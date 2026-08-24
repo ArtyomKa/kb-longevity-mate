@@ -26,7 +26,10 @@ export interface Template {
 export interface LoggedSet {
   exerciseName: string;
   weightKg: number | null;
+  /** planned/target reps as written on the template */
   reps: string;
+  /** actual reps recorded for each completed set */
+  repsDone?: number[];
   setsPlanned: number;
   setsCompleted: number;
   setsSkipped: number;
