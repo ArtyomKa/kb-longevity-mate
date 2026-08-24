@@ -33,7 +33,26 @@ interface Progress {
   skipped: number;
   rpe: number | null;
   weightKg: number | null;
+  /** reps recorded per completed set */
+  repsDone: number[];
+  /** current rep counter value for the set in progress */
+  repInput: number;
 }
+
+/** pull a sensible starting rep count out of a template string like "12-15" or "10 marches" */
+function targetReps(reps?: string) {
+  const m = reps?.match(/\d+/);
+  return m ? Number(m[0]) : 10;
+}
+
+const emptyProgress = (): Progress => ({
+  completed: 0,
+  skipped: 0,
+  rpe: null,
+  weightKg: null,
+  repsDone: [],
+  repInput: 10,
+});
 
 function WorkoutPage() {
   const [templates] = useTemplates();
