@@ -48,13 +48,15 @@ export function buildWeeklyMarkdown(logs: WorkoutLog[], ref = new Date()) {
     lines.push(`## ${fmt(log.dateISO)} — ${log.templateName}`);
     lines.push(`Duration: ${Math.round(log.durationSec / 60)} min`);
     lines.push("");
-    lines.push("| Exercise | Weight | Sets done | Reps | RPE |");
-    lines.push("| --- | --- | --- | --- | --- |");
+    lines.push("| Exercise | Weight | Sets done | Target reps | Actual reps | Total reps | RPE |");
+    lines.push("| --- | --- | --- | --- | --- | --- | --- |");
     for (const e of log.entries) {
+      const done = e.repsDone ?? [];
+      const total = done.reduce((s, r) => s + r, 0);
       lines.push(
         `| ${e.exerciseName} | ${e.weightKg ? `${e.weightKg} kg` : "BW"} | ${e.setsCompleted}/${e.setsPlanned}${
           e.setsSkipped ? ` (${e.setsSkipped} skipped)` : ""
-        } | ${e.reps || "-"} | ${e.rpe ?? "-"} |`,
+        } | ${e.reps || "-"} | ${done.length ? done.join(", ") : "-"} | ${done.length ? total : "-"} | ${e.rpe ?? "-"} |`,
       );
     }
     const bf = log.biofeedback;
