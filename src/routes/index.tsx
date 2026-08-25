@@ -177,7 +177,7 @@ function WorkoutPage() {
       biofeedback: bio,
     };
     setLogs((prev) => [log, ...prev]);
-    setActive(null);
+    setSession(null);
     setFinishing(false);
     setBio({ energy: 7, legCompensation: "none", legNotes: "", jointNotes: "" });
     toast.success("Session saved to History");
@@ -317,7 +317,7 @@ function WorkoutPage() {
           </h1>
         </div>
         <button
-          onClick={() => setActive(null)}
+          onClick={() => setSession(null)}
           className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-secondary text-secondary-foreground"
           aria-label="Quit workout"
         >
