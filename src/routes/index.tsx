@@ -317,7 +317,9 @@ function WorkoutPage() {
           </h1>
         </div>
         <button
-          onClick={() => setSession(null)}
+          onClick={() => {
+            if (window.confirm("Discard this session and its logged sets?")) setSession(null);
+          }}
           className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-secondary text-secondary-foreground"
           aria-label="Quit workout"
         >
