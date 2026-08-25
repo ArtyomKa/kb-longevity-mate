@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Check, ChevronRight, Minus, Plus, Repeat, SkipForward, Timer, X } from "lucide-react";
-import { useLogs, useSettings, useTemplates } from "@/lib/kb-store";
+import { useLogs, useSession, useSettings, useTemplates } from "@/lib/kb-store";
 import type { Biofeedback, LoggedSet, Template, WorkoutLog } from "@/lib/kb-types";
 import { RestTimer } from "@/components/kb/RestTimer";
 import { Metronome } from "@/components/kb/Metronome";
@@ -58,11 +58,8 @@ function WorkoutPage() {
   const [templates] = useTemplates();
   const [settings] = useSettings();
   const [, setLogs] = useLogs();
+  const [session, setSession] = useSession();
 
-  const [active, setActive] = useState<Template | null>(null);
-  const [startedAt, setStartedAt] = useState<number>(0);
-  const [index, setIndex] = useState(0);
-  const [progress, setProgress] = useState<Record<string, Progress>>({});
   const [restFor, setRestFor] = useState<number | null>(null);
   const [metronome, setMetronome] = useState(settings.metronomeEnabled);
   const [finishing, setFinishing] = useState(false);
@@ -72,6 +69,16 @@ function WorkoutPage() {
     legNotes: "",
     jointNotes: "",
   });
+
+  const active = useMemo(
+    () => templates.find((t) => t.id === session?.templateId) ?? null,
+    [templates, session?.templateId],
+  );
+  const index = session?.index ?? 0;
+  const progress = session?.progress ?? {};
+  const startedAt = session?.startedAt ?? 0;
+
+  const setIndex = (i: number) => setSession((s) => (s ? { ...s, index: i } : s));
 
   const exercise = active?.exercises[index];
   const prog = exercise ? progress[exercise.id] : undefined;
@@ -87,12 +94,12 @@ function WorkoutPage() {
 
   const begin = (t: Template) => {
     unlockAudio();
-    setActive(t);
-    setStartedAt(Date.now());
-    setIndex(0);
     setMetronome(settings.metronomeEnabled);
-    setProgress(
-      Object.fromEntries(
+    setSession({
+      templateId: t.id,
+      startedAt: Date.now(),
+      index: 0,
+      progress: Object.fromEntries(
         t.exercises.map((e) => [
           e.id,
           {
@@ -102,14 +109,18 @@ function WorkoutPage() {
           },
         ]),
       ),
-    );
+    });
   };
 
   const patchProgress = (id: string, patch: Partial<Progress>) =>
-    setProgress((p) => ({
-      ...p,
-      [id]: { ...(p[id] ?? emptyProgress()), ...patch },
-    }));
+    setSession((s) =>
+      s
+        ? {
+            ...s,
+            progress: { ...s.progress, [id]: { ...(s.progress[id] ?? emptyProgress()), ...patch } },
+          }
+        : s,
+    );
 
   const bump = (kind: "completed" | "skipped") => {
     if (!exercise) return;
@@ -122,17 +133,24 @@ function WorkoutPage() {
           ? [...current.repsDone, current.repInput]
           : current.repsDone,
     };
-    setProgress((p) => ({ ...p, [exercise.id]: next }));
+    const finishedAll = next.completed + next.skipped >= exercise.sets;
+    const advance = finishedAll && index < active!.exercises.length - 1;
+    setSession((s) =>
+      s
+        ? {
+            ...s,
+            index: advance ? index + 1 : s.index,
+            progress: { ...s.progress, [exercise.id]: next },
+          }
+        : s,
+    );
     if (settings.hapticsEnabled) buzz(kind === "completed" ? 45 : 20);
 
-    const finishedAll = next.completed + next.skipped >= exercise.sets;
-    if (kind === "completed" && exercise.restSec > 0 && !finishedAll) {
+    if (kind === "completed" && exercise.restSec > 0) {
       setRestFor(exercise.restSec);
-    } else if (finishedAll && index < active!.exercises.length - 1) {
-      if (kind === "completed" && exercise.restSec > 0) setRestFor(exercise.restSec);
-      setIndex(index + 1);
     }
   };
+
 
   const saveWorkout = () => {
     if (!active) return;
@@ -159,7 +177,7 @@ function WorkoutPage() {
       biofeedback: bio,
     };
     setLogs((prev) => [log, ...prev]);
-    setActive(null);
+    setSession(null);
     setFinishing(false);
     setBio({ energy: 7, legCompensation: "none", legNotes: "", jointNotes: "" });
     toast.success("Session saved to History");
@@ -299,7 +317,9 @@ function WorkoutPage() {
           </h1>
         </div>
         <button
-          onClick={() => setActive(null)}
+          onClick={() => {
+            if (window.confirm("Discard this session and its logged sets?")) setSession(null);
+          }}
           className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-secondary text-secondary-foreground"
           aria-label="Quit workout"
         >

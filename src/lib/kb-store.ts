@@ -11,7 +11,25 @@ const KEYS = {
   templates: "kbl.templates.v1",
   logs: "kbl.logs.v1",
   settings: "kbl.settings.v1",
+  session: "kbl.session.v1",
 };
+
+export interface SessionProgress {
+  completed: number;
+  skipped: number;
+  rpe: number | null;
+  weightKg: number | null;
+  repsDone: number[];
+  repInput: number;
+}
+
+export interface ActiveSession {
+  templateId: string;
+  startedAt: number;
+  index: number;
+  progress: Record<string, SessionProgress>;
+}
+
 
 function read<T>(key: string, fallback: T): T {
   if (typeof window === "undefined") return fallback;
@@ -54,3 +72,5 @@ function usePersisted<T>(key: string, fallback: T) {
 export const useTemplates = () => usePersisted<Template[]>(KEYS.templates, DEFAULT_TEMPLATES);
 export const useLogs = () => usePersisted<WorkoutLog[]>(KEYS.logs, []);
 export const useSettings = () => usePersisted<Settings>(KEYS.settings, DEFAULT_SETTINGS);
+export const useSession = () => usePersisted<ActiveSession | null>(KEYS.session, null);
+
