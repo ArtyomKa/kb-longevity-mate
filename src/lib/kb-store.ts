@@ -72,3 +72,5 @@ function usePersisted<T>(key: string, fallback: T) {
 export const useTemplates = () => usePersisted<Template[]>(KEYS.templates, DEFAULT_TEMPLATES);
 export const useLogs = () => usePersisted<WorkoutLog[]>(KEYS.logs, []);
 export const useSettings = () => usePersisted<Settings>(KEYS.settings, DEFAULT_SETTINGS);
+export const useSession = () => usePersisted<ActiveSession | null>(KEYS.session, null);
+
