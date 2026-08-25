@@ -11,7 +11,25 @@ const KEYS = {
   templates: "kbl.templates.v1",
   logs: "kbl.logs.v1",
   settings: "kbl.settings.v1",
+  session: "kbl.session.v1",
 };
+
+export interface SessionProgress {
+  completed: number;
+  skipped: number;
+  rpe: number | null;
+  weightKg: number | null;
+  repsDone: number[];
+  repInput: number;
+}
+
+export interface ActiveSession {
+  templateId: string;
+  startedAt: number;
+  index: number;
+  progress: Record<string, SessionProgress>;
+}
+
 
 function read<T>(key: string, fallback: T): T {
   if (typeof window === "undefined") return fallback;
