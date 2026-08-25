@@ -26,8 +26,12 @@ export function RestTimer({ seconds, sound, haptics, onDone, onDismiss }: Props)
       if (sound) chime();
       if (haptics) buzz([120, 80, 120, 80, 240]);
       onDone();
+      const id = window.setTimeout(() => onDismiss(), 1200);
+      return () => window.clearTimeout(id);
     }
-  }, [left, sound, haptics, onDone]);
+    return undefined;
+  }, [left, sound, haptics, onDone, onDismiss]);
+
 
   const pct = total === 0 ? 0 : left / total;
   const r = 130;
