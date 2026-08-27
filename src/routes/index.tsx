@@ -551,6 +551,31 @@ function WorkoutPage() {
             </button>
           </div>
 
+          <div className="mt-3 flex gap-3">
+            <button
+              onClick={addSet}
+              className="flex h-14 flex-1 items-center justify-center gap-2 rounded-xl bg-secondary text-sm font-bold text-secondary-foreground active:scale-[0.99]"
+            >
+              <Plus className="size-5" /> Add set
+            </button>
+            {(prog?.extraSets ?? 0) > 0 && (
+              <button
+                onClick={removeExtraSet}
+                className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border border-border text-muted-foreground active:scale-95"
+                aria-label="Remove added set"
+              >
+                <Undo2 className="size-5" />
+              </button>
+            )}
+          </div>
+          {(prog?.extraSets ?? 0) > 0 && (
+            <p className="mt-2 text-xs text-muted-foreground">
+              +{prog?.extraSets} set{(prog?.extraSets ?? 0) === 1 ? "" : "s"} added today
+            </p>
+          )}
+
+
+
           <button
             onClick={() => setRestFor(exercise.restSec || settings.defaultRestSec)}
             className="mt-3 flex h-14 w-full items-center justify-center gap-2 rounded-xl border border-border text-sm font-semibold text-muted-foreground"
