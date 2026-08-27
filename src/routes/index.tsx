@@ -322,6 +322,42 @@ function WorkoutPage() {
           </div>
         </div>
 
+        {templateChanges.length > 0 && (
+          <div className="surface mt-4 rounded-2xl p-5">
+            <p className="font-display text-lg font-bold uppercase">
+              Save changes to {active.name}?
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Today's session differed from the template. Pick what to keep.
+            </p>
+            <div className="mt-3 space-y-2">
+              {templateChanges.map((c) => (
+                <label
+                  key={c.key}
+                  className="flex items-center justify-between gap-3 rounded-xl bg-muted/60 p-3"
+                >
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm font-semibold">{c.label}</span>
+                    <span className="tabular block text-xs text-muted-foreground">
+                      {c.from} → {c.to}
+                    </span>
+                  </span>
+                  <input
+                    type="checkbox"
+                    checked={!!acceptedChanges[c.key]}
+                    onChange={(e) =>
+                      setAcceptedChanges((prev) => ({ ...prev, [c.key]: e.target.checked }))
+                    }
+                    className="size-6 shrink-0 accent-[var(--primary)]"
+                  />
+                </label>
+              ))}
+            </div>
+          </div>
+        )}
+
+
+
         <button
           onClick={saveWorkout}
           className="mt-5 h-16 w-full rounded-2xl bg-primary text-lg font-bold text-primary-foreground active:scale-[0.99]"
