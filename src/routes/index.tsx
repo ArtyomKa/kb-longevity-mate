@@ -168,6 +168,23 @@ function WorkoutPage() {
   };
 
 
+  const addSet = () => {
+    if (!exercise) return;
+    patchProgress(exercise.id, { extraSets: (prog?.extraSets ?? 0) + 1 });
+    if (settings.hapticsEnabled) buzz(25);
+    toast.success("Extra set added");
+  };
+
+  const removeExtraSet = () => {
+    if (!exercise) return;
+    const extra = prog?.extraSets ?? 0;
+    if (extra <= 0) return;
+    // don't drop below sets already logged
+    const logged = (prog?.completed ?? 0) + (prog?.skipped ?? 0);
+    if (exercise.sets + extra - 1 < logged) return;
+    patchProgress(exercise.id, { extraSets: extra - 1 });
+  };
+
   const saveWorkout = () => {
     if (!active) return;
     const entries: LoggedSet[] = active.exercises.map((e) => {
@@ -177,7 +194,7 @@ function WorkoutPage() {
         weightKg: p?.weightKg ?? null,
         reps: e.kind === "timed" ? `${Math.round((e.durationSec ?? 0) / 60)} min` : (e.reps ?? ""),
         repsDone: p?.repsDone ?? [],
-        setsPlanned: e.sets,
+        setsPlanned: e.sets + (p?.extraSets ?? 0),
         setsCompleted: p?.completed ?? 0,
         setsSkipped: p?.skipped ?? 0,
         rpe: p?.rpe ?? null,
@@ -193,11 +210,25 @@ function WorkoutPage() {
       biofeedback: bio,
     };
     setLogs((prev) => [log, ...prev]);
+
+    const selected = templateChanges.filter((c) => acceptedChanges[c.key]);
+    if (selected.length) {
+      setTemplates((prev) =>
+        prev.map((t) => (t.id === active.id ? applyTemplateChanges(t, selected) : t)),
+      );
+    }
+
     setSession(null);
     setFinishing(false);
+    setAcceptedChanges({});
     setBio({ energy: 7, legCompensation: "none", legNotes: "", jointNotes: "" });
-    toast.success("Session saved to History");
+    toast.success(
+      selected.length
+        ? `Session saved · ${selected.length} template change${selected.length === 1 ? "" : "s"} applied`
+        : "Session saved to History",
+    );
   };
+
 
   /* ---------- template picker ---------- */
   if (!active) {
