@@ -606,7 +606,7 @@ function WorkoutPage() {
       <div className="mt-6 space-y-2">
         {active.exercises.map((e, i) => {
           const p = progress[e.id];
-          const done = (p?.completed ?? 0) + (p?.skipped ?? 0) >= e.sets;
+          const done = (p?.completed ?? 0) + (p?.skipped ?? 0) >= setsFor(e);
           return (
             <button
               key={e.id}
