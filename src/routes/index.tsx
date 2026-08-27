@@ -619,7 +619,7 @@ function WorkoutPage() {
                 {e.name}
               </span>
               <span className="tabular text-xs text-muted-foreground">
-                {(p?.completed ?? 0) + (p?.skipped ?? 0)}/{e.sets}
+                {(p?.completed ?? 0) + (p?.skipped ?? 0)}/{setsFor(e)}
               </span>
             </button>
           );
