@@ -149,7 +149,7 @@ function WorkoutPage() {
           ? [...current.repsDone, current.repInput]
           : current.repsDone,
     };
-    const finishedAll = next.completed + next.skipped >= exercise.sets;
+    const finishedAll = next.completed + next.skipped >= setsFor(exercise);
     const advance = finishedAll && index < active!.exercises.length - 1;
     setSession((s) =>
       s
