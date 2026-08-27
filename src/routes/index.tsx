@@ -1,13 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Check, ChevronRight, Minus, Plus, Repeat, SkipForward, Timer, X } from "lucide-react";
+import { Check, ChevronRight, Minus, Plus, Repeat, SkipForward, Timer, Undo2, X } from "lucide-react";
 import { useLogs, useSession, useSettings, useTemplates } from "@/lib/kb-store";
-import type { Biofeedback, LoggedSet, Template, WorkoutLog } from "@/lib/kb-types";
+import type { Biofeedback, Exercise, LoggedSet, Template, WorkoutLog } from "@/lib/kb-types";
+import { applyTemplateChanges, buildTemplateChanges } from "@/lib/kb-template-diff";
 import { RestTimer } from "@/components/kb/RestTimer";
 import { Metronome } from "@/components/kb/Metronome";
 import { buzz, unlockAudio } from "@/lib/kb-feedback";
 import { Slider } from "@/components/ui/slider";
+
 
 export const Route = createFileRoute("/")({
   head: () => ({
