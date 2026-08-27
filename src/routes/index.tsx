@@ -375,7 +375,7 @@ function WorkoutPage() {
   }
 
   /* ---------- active workout ---------- */
-  const setsLeft = exercise ? exercise.sets - (prog?.completed ?? 0) - (prog?.skipped ?? 0) : 0;
+  const setsLeft = exercise ? setsFor(exercise) - (prog?.completed ?? 0) - (prog?.skipped ?? 0) : 0;
 
   return (
     <div className="px-4 pt-6">
