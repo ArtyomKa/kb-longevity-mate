@@ -37,6 +37,8 @@ interface Progress {
   repsDone: number[];
   /** current rep counter value for the set in progress */
   repInput: number;
+  /** sets added on top of the template today */
+  extraSets?: number;
 }
 
 /** pull a sensible starting rep count out of a template string like "12-15" or "10 marches" */
@@ -52,7 +54,9 @@ const emptyProgress = (): Progress => ({
   weightKg: null,
   repsDone: [],
   repInput: 10,
+  extraSets: 0,
 });
+
 
 function WorkoutPage() {
   const [templates] = useTemplates();
