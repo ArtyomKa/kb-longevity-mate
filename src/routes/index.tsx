@@ -59,7 +59,7 @@ const emptyProgress = (): Progress => ({
 
 
 function WorkoutPage() {
-  const [templates] = useTemplates();
+  const [templates, setTemplates] = useTemplates();
   const [settings] = useSettings();
   const [, setLogs] = useLogs();
   const [session, setSession] = useSession();
@@ -67,6 +67,7 @@ function WorkoutPage() {
   const [restFor, setRestFor] = useState<number | null>(null);
   const [metronome, setMetronome] = useState(settings.metronomeEnabled);
   const [finishing, setFinishing] = useState(false);
+  const [acceptedChanges, setAcceptedChanges] = useState<Record<string, boolean>>({});
   const [bio, setBio] = useState<Biofeedback>({
     energy: 7,
     legCompensation: "none",
@@ -87,10 +88,19 @@ function WorkoutPage() {
   const exercise = active?.exercises[index];
   const prog = exercise ? progress[exercise.id] : undefined;
 
-  const totalSets = useMemo(
-    () => active?.exercises.reduce((sum, e) => sum + e.sets, 0) ?? 0,
-    [active],
+  /** planned sets for an exercise including sets added today */
+  const setsFor = (e: Exercise) => e.sets + (progress[e.id]?.extraSets ?? 0);
+
+  const templateChanges = useMemo(
+    () => (active ? buildTemplateChanges(active, progress) : []),
+    [active, progress],
   );
+
+  const totalSets = useMemo(
+    () => active?.exercises.reduce((sum, e) => sum + e.sets + (progress[e.id]?.extraSets ?? 0), 0) ?? 0,
+    [active, progress],
+  );
+
   const doneSets = useMemo(
     () => Object.values(progress).reduce((s, p) => s + p.completed + p.skipped, 0),
     [progress],
