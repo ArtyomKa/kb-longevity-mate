@@ -431,7 +431,7 @@ function WorkoutPage() {
                     : `${exercise.reps} ${exercise.perSide ? "/ side" : "reps"}`}
                 </p>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  {setsLeft} of {exercise.sets} set{exercise.sets === 1 ? "" : "s"} remaining
+                  {setsLeft} of {setsFor(exercise)} set{setsFor(exercise) === 1 ? "" : "s"} remaining
                   {exercise.tempo ? ` · ${exercise.tempo} tempo` : ""}
                   {exercise.restSec ? ` · rest ${exercise.restSec}s` : ""}
                 </p>
