@@ -1,13 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Check, ChevronRight, Minus, Plus, Repeat, SkipForward, Timer, X } from "lucide-react";
+import { Check, ChevronRight, Minus, Plus, Repeat, SkipForward, Timer, Undo2, X } from "lucide-react";
 import { useLogs, useSession, useSettings, useTemplates } from "@/lib/kb-store";
-import type { Biofeedback, LoggedSet, Template, WorkoutLog } from "@/lib/kb-types";
+import type { Biofeedback, Exercise, LoggedSet, Template, WorkoutLog } from "@/lib/kb-types";
+import { applyTemplateChanges, buildTemplateChanges } from "@/lib/kb-template-diff";
 import { RestTimer } from "@/components/kb/RestTimer";
 import { Metronome } from "@/components/kb/Metronome";
 import { buzz, unlockAudio } from "@/lib/kb-feedback";
 import { Slider } from "@/components/ui/slider";
+
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -37,6 +39,8 @@ interface Progress {
   repsDone: number[];
   /** current rep counter value for the set in progress */
   repInput: number;
+  /** sets added on top of the template today */
+  extraSets?: number;
 }
 
 /** pull a sensible starting rep count out of a template string like "12-15" or "10 marches" */
@@ -52,10 +56,12 @@ const emptyProgress = (): Progress => ({
   weightKg: null,
   repsDone: [],
   repInput: 10,
+  extraSets: 0,
 });
 
+
 function WorkoutPage() {
-  const [templates] = useTemplates();
+  const [templates, setTemplates] = useTemplates();
   const [settings] = useSettings();
   const [, setLogs] = useLogs();
   const [session, setSession] = useSession();
@@ -63,6 +69,7 @@ function WorkoutPage() {
   const [restFor, setRestFor] = useState<number | null>(null);
   const [metronome, setMetronome] = useState(settings.metronomeEnabled);
   const [finishing, setFinishing] = useState(false);
+  const [acceptedChanges, setAcceptedChanges] = useState<Record<string, boolean>>({});
   const [bio, setBio] = useState<Biofeedback>({
     energy: 7,
     legCompensation: "none",
@@ -83,10 +90,19 @@ function WorkoutPage() {
   const exercise = active?.exercises[index];
   const prog = exercise ? progress[exercise.id] : undefined;
 
-  const totalSets = useMemo(
-    () => active?.exercises.reduce((sum, e) => sum + e.sets, 0) ?? 0,
-    [active],
+  /** planned sets for an exercise including sets added today */
+  const setsFor = (e: Exercise) => e.sets + (progress[e.id]?.extraSets ?? 0);
+
+  const templateChanges = useMemo(
+    () => (active ? buildTemplateChanges(active, progress) : []),
+    [active, progress],
   );
+
+  const totalSets = useMemo(
+    () => active?.exercises.reduce((sum, e) => sum + e.sets + (progress[e.id]?.extraSets ?? 0), 0) ?? 0,
+    [active, progress],
+  );
+
   const doneSets = useMemo(
     () => Object.values(progress).reduce((s, p) => s + p.completed + p.skipped, 0),
     [progress],
@@ -133,7 +149,7 @@ function WorkoutPage() {
           ? [...current.repsDone, current.repInput]
           : current.repsDone,
     };
-    const finishedAll = next.completed + next.skipped >= exercise.sets;
+    const finishedAll = next.completed + next.skipped >= setsFor(exercise);
     const advance = finishedAll && index < active!.exercises.length - 1;
     setSession((s) =>
       s
@@ -152,6 +168,23 @@ function WorkoutPage() {
   };
 
 
+  const addSet = () => {
+    if (!exercise) return;
+    patchProgress(exercise.id, { extraSets: (prog?.extraSets ?? 0) + 1 });
+    if (settings.hapticsEnabled) buzz(25);
+    toast.success("Extra set added");
+  };
+
+  const removeExtraSet = () => {
+    if (!exercise) return;
+    const extra = prog?.extraSets ?? 0;
+    if (extra <= 0) return;
+    // don't drop below sets already logged
+    const logged = (prog?.completed ?? 0) + (prog?.skipped ?? 0);
+    if (exercise.sets + extra - 1 < logged) return;
+    patchProgress(exercise.id, { extraSets: extra - 1 });
+  };
+
   const saveWorkout = () => {
     if (!active) return;
     const entries: LoggedSet[] = active.exercises.map((e) => {
@@ -161,7 +194,7 @@ function WorkoutPage() {
         weightKg: p?.weightKg ?? null,
         reps: e.kind === "timed" ? `${Math.round((e.durationSec ?? 0) / 60)} min` : (e.reps ?? ""),
         repsDone: p?.repsDone ?? [],
-        setsPlanned: e.sets,
+        setsPlanned: e.sets + (p?.extraSets ?? 0),
         setsCompleted: p?.completed ?? 0,
         setsSkipped: p?.skipped ?? 0,
         rpe: p?.rpe ?? null,
@@ -177,11 +210,25 @@ function WorkoutPage() {
       biofeedback: bio,
     };
     setLogs((prev) => [log, ...prev]);
+
+    const selected = templateChanges.filter((c) => acceptedChanges[c.key]);
+    if (selected.length) {
+      setTemplates((prev) =>
+        prev.map((t) => (t.id === active.id ? applyTemplateChanges(t, selected) : t)),
+      );
+    }
+
     setSession(null);
     setFinishing(false);
+    setAcceptedChanges({});
     setBio({ energy: 7, legCompensation: "none", legNotes: "", jointNotes: "" });
-    toast.success("Session saved to History");
+    toast.success(
+      selected.length
+        ? `Session saved · ${selected.length} template change${selected.length === 1 ? "" : "s"} applied`
+        : "Session saved to History",
+    );
   };
+
 
   /* ---------- template picker ---------- */
   if (!active) {
@@ -275,6 +322,42 @@ function WorkoutPage() {
           </div>
         </div>
 
+        {templateChanges.length > 0 && (
+          <div className="surface mt-4 rounded-2xl p-5">
+            <p className="font-display text-lg font-bold uppercase">
+              Save changes to {active.name}?
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Today's session differed from the template. Pick what to keep.
+            </p>
+            <div className="mt-3 space-y-2">
+              {templateChanges.map((c) => (
+                <label
+                  key={c.key}
+                  className="flex items-center justify-between gap-3 rounded-xl bg-muted/60 p-3"
+                >
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm font-semibold">{c.label}</span>
+                    <span className="tabular block text-xs text-muted-foreground">
+                      {c.from} → {c.to}
+                    </span>
+                  </span>
+                  <input
+                    type="checkbox"
+                    checked={!!acceptedChanges[c.key]}
+                    onChange={(e) =>
+                      setAcceptedChanges((prev) => ({ ...prev, [c.key]: e.target.checked }))
+                    }
+                    className="size-6 shrink-0 accent-[var(--primary)]"
+                  />
+                </label>
+              ))}
+            </div>
+          </div>
+        )}
+
+
+
         <button
           onClick={saveWorkout}
           className="mt-5 h-16 w-full rounded-2xl bg-primary text-lg font-bold text-primary-foreground active:scale-[0.99]"
@@ -292,7 +375,7 @@ function WorkoutPage() {
   }
 
   /* ---------- active workout ---------- */
-  const setsLeft = exercise ? exercise.sets - (prog?.completed ?? 0) - (prog?.skipped ?? 0) : 0;
+  const setsLeft = exercise ? setsFor(exercise) - (prog?.completed ?? 0) - (prog?.skipped ?? 0) : 0;
 
   return (
     <div className="px-4 pt-6">
@@ -348,7 +431,7 @@ function WorkoutPage() {
                     : `${exercise.reps} ${exercise.perSide ? "/ side" : "reps"}`}
                 </p>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  {setsLeft} of {exercise.sets} set{exercise.sets === 1 ? "" : "s"} remaining
+                  {setsLeft} of {setsFor(exercise)} set{setsFor(exercise) === 1 ? "" : "s"} remaining
                   {exercise.tempo ? ` · ${exercise.tempo} tempo` : ""}
                   {exercise.restSec ? ` · rest ${exercise.restSec}s` : ""}
                 </p>
@@ -468,6 +551,31 @@ function WorkoutPage() {
             </button>
           </div>
 
+          <div className="mt-3 flex gap-3">
+            <button
+              onClick={addSet}
+              className="flex h-14 flex-1 items-center justify-center gap-2 rounded-xl bg-secondary text-sm font-bold text-secondary-foreground active:scale-[0.99]"
+            >
+              <Plus className="size-5" /> Add set
+            </button>
+            {(prog?.extraSets ?? 0) > 0 && (
+              <button
+                onClick={removeExtraSet}
+                className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border border-border text-muted-foreground active:scale-95"
+                aria-label="Remove added set"
+              >
+                <Undo2 className="size-5" />
+              </button>
+            )}
+          </div>
+          {(prog?.extraSets ?? 0) > 0 && (
+            <p className="mt-2 text-xs text-muted-foreground">
+              +{prog?.extraSets} set{(prog?.extraSets ?? 0) === 1 ? "" : "s"} added today
+            </p>
+          )}
+
+
+
           <button
             onClick={() => setRestFor(exercise.restSec || settings.defaultRestSec)}
             className="mt-3 flex h-14 w-full items-center justify-center gap-2 rounded-xl border border-border text-sm font-semibold text-muted-foreground"
@@ -498,7 +606,7 @@ function WorkoutPage() {
       <div className="mt-6 space-y-2">
         {active.exercises.map((e, i) => {
           const p = progress[e.id];
-          const done = (p?.completed ?? 0) + (p?.skipped ?? 0) >= e.sets;
+          const done = (p?.completed ?? 0) + (p?.skipped ?? 0) >= setsFor(e);
           return (
             <button
               key={e.id}
@@ -511,7 +619,7 @@ function WorkoutPage() {
                 {e.name}
               </span>
               <span className="tabular text-xs text-muted-foreground">
-                {(p?.completed ?? 0) + (p?.skipped ?? 0)}/{e.sets}
+                {(p?.completed ?? 0) + (p?.skipped ?? 0)}/{setsFor(e)}
               </span>
             </button>
           );

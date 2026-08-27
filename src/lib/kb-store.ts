@@ -21,7 +21,10 @@ export interface SessionProgress {
   weightKg: number | null;
   repsDone: number[];
   repInput: number;
+  /** extra sets added on top of the template during this session */
+  extraSets?: number;
 }
+
 
 export interface ActiveSession {
   templateId: string;
