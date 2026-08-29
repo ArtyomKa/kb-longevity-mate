@@ -5,6 +5,7 @@ import { Plus, RotateCcw, Trash2 } from "lucide-react";
 import { useSettings, useTemplates } from "@/lib/kb-store";
 import { DEFAULT_TEMPLATES, type Exercise } from "@/lib/kb-types";
 import { Switch } from "@/components/ui/switch";
+import { ImportPlanCard } from "@/components/kb/ImportPlanCard";
 
 export const Route = createFileRoute("/settings")({
   head: () => ({
