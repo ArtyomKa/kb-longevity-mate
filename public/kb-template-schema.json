@@ -1,0 +1,105 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kb-longevity-mate.lovable.app/kb-template-schema.json",
+  "title": "Kettlebell Longevity Tracker — training plan",
+  "description": "A training plan importable into the Kettlebell Longevity Tracker app. Designed for single/dual kettlebell training on a 2-mat footprint. Generate JSON matching this schema exactly.",
+  "type": "object",
+  "required": ["templates"],
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "type": "integer",
+      "description": "Schema version. Use 1.",
+      "default": 1
+    },
+    "templates": {
+      "type": "array",
+      "description": "One entry per training day / routine.",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/template" }
+    }
+  },
+  "$defs": {
+    "template": {
+      "type": "object",
+      "required": ["name", "exercises"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Optional stable id (e.g. \"day-a\"). If it matches an existing template the import overwrites it. Omit to create a new template."
+        },
+        "name": { "type": "string", "description": "Short day name, e.g. \"Day A\"." },
+        "subtitle": { "type": "string", "description": "Focus of the day, e.g. \"Hinge & Push\"." },
+        "exercises": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/exercise" }
+        }
+      }
+    },
+    "exercise": {
+      "type": "object",
+      "required": ["name"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "description": "Optional stable id; generated when omitted." },
+        "name": { "type": "string", "description": "Exercise name, e.g. \"2-Handed Swings\"." },
+        "kind": {
+          "type": "string",
+          "enum": ["reps", "timed"],
+          "default": "reps",
+          "description": "\"reps\" for set/rep work, \"timed\" for a duration-based drill."
+        },
+        "durationSec": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Required for kind = \"timed\": length of the drill in seconds."
+        },
+        "sets": { "type": "integer", "minimum": 1, "default": 3 },
+        "reps": {
+          "type": "string",
+          "description": "Rep target as text; a number (\"10\"), a range (\"12-15\") or a phrase (\"10 marches\")."
+        },
+        "perSide": {
+          "type": "boolean",
+          "default": false,
+          "description": "True when the reps are performed per side."
+        },
+        "weightKg": {
+          "type": ["number", "null"],
+          "description": "Kettlebell load in kg. null or omitted means bodyweight."
+        },
+        "tempo": {
+          "type": ["string", "null"],
+          "description": "Tempo prescription; use \"3-1-3\" to enable the in-app metronome, otherwise null."
+        },
+        "restSec": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 60,
+          "description": "Rest between sets in seconds."
+        },
+        "note": { "type": "string", "description": "Optional coaching cue shown during the session." }
+      }
+    }
+  },
+  "examples": [
+    {
+      "version": 1,
+      "templates": [
+        {
+          "id": "day-a",
+          "name": "Day A",
+          "subtitle": "Hinge & Push",
+          "exercises": [
+            { "id": "a1", "name": "Step-Back Toe-to-Heel Taps", "kind": "timed", "durationSec": 120, "sets": 1, "restSec": 0 },
+            { "name": "2-Handed Swings", "sets": 3, "reps": "12-15", "weightKg": 14, "restSec": 90 },
+            { "name": "Single-Arm Overhead Press", "sets": 3, "reps": "6-8", "perSide": true, "weightKg": 10, "restSec": 90 },
+            { "name": "Goblet Squats", "sets": 3, "reps": "8", "weightKg": 10, "tempo": "3-1-3", "restSec": 90 }
+          ]
+        }
+      ]
+    }
+  ]
+}
