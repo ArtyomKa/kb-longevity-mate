@@ -95,7 +95,7 @@ export function parsePlan(raw: string, defaults: { restSec: number }): ParseResu
         kind,
         ...(kind === "timed" ? { durationSec: e.durationSec ?? 60 } : {}),
         sets: e.sets ?? 1,
-        reps: kind === "reps" ? String(e.reps ?? "10") : undefined,
+        ...(kind === "reps" ? { reps: String(e.reps ?? "10") } : {}),
         perSide: e.perSide ?? false,
         weightKg: e.weightKg ?? null,
         tempo: e.tempo ?? null,
