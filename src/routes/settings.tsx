@@ -1,7 +1,26 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Plus, RotateCcw, Trash2 } from "lucide-react";
+import { Copy, ClipboardPaste, GripVertical, Plus, RotateCcw, Trash2, X } from "lucide-react";
+import {
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  TouchSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import { restrictToParentElement, restrictToVerticalAxis } from "@dnd-kit/modifiers";
+import {
+  SortableContext,
+  arrayMove,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { useSettings, useTemplates } from "@/lib/kb-store";
 import { DEFAULT_TEMPLATES, type Exercise } from "@/lib/kb-types";
 import { Switch } from "@/components/ui/switch";
@@ -25,10 +44,145 @@ export const Route = createFileRoute("/settings")({
 const numField =
   "h-11 w-full rounded-lg border border-input bg-background px-3 text-base text-foreground outline-none focus:border-primary";
 
+function SortableExerciseRow({
+  exercise: e,
+  onPatch,
+  onRemove,
+  onCopy,
+}: {
+  exercise: Exercise;
+  onPatch: (patch: Partial<Exercise>) => void;
+  onRemove: () => void;
+  onCopy: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: e.id,
+  });
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+      className={`rounded-xl bg-background/50 p-3 ${
+        isDragging ? "z-10 shadow-xl shadow-black/40 ring-1 ring-primary/40" : ""
+      }`}
+    >
+      <div className="mb-3 flex items-center gap-2">
+        <button
+          {...attributes}
+          {...listeners}
+          className="flex size-10 shrink-0 touch-none items-center justify-center rounded-lg text-muted-foreground active:bg-secondary"
+          aria-label={`Reorder ${e.name}`}
+        >
+          <GripVertical className="size-5" />
+        </button>
+        <input
+          value={e.name}
+          onChange={(ev) => onPatch({ name: ev.target.value })}
+          className="w-full bg-transparent font-display text-lg font-semibold text-foreground outline-none"
+        />
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        {e.kind === "timed" ? (
+          <label className="text-xs text-muted-foreground">
+            Duration (s)
+            <input
+              type="number"
+              inputMode="numeric"
+              className={numField}
+              value={e.durationSec ?? 0}
+              onChange={(ev) => onPatch({ durationSec: Number(ev.target.value) })}
+            />
+          </label>
+        ) : (
+          <>
+            <label className="text-xs text-muted-foreground">
+              Sets
+              <input
+                type="number"
+                inputMode="numeric"
+                className={numField}
+                value={e.sets}
+                onChange={(ev) => onPatch({ sets: Math.max(1, Number(ev.target.value)) })}
+              />
+            </label>
+            <label className="text-xs text-muted-foreground">
+              Reps
+              <input
+                className={numField}
+                value={e.reps ?? ""}
+                onChange={(ev) => onPatch({ reps: ev.target.value })}
+              />
+            </label>
+          </>
+        )}
+        <label className="text-xs text-muted-foreground">
+          Weight (kg, blank = BW)
+          <input
+            type="number"
+            inputMode="decimal"
+            className={numField}
+            value={e.weightKg ?? ""}
+            onChange={(ev) =>
+              onPatch({ weightKg: ev.target.value === "" ? null : Number(ev.target.value) })
+            }
+          />
+        </label>
+        <label className="text-xs text-muted-foreground">
+          Rest (s)
+          <input
+            type="number"
+            inputMode="numeric"
+            className={numField}
+            value={e.restSec}
+            onChange={(ev) => onPatch({ restSec: Number(ev.target.value) })}
+          />
+        </label>
+      </div>
+      <div className="mt-3 flex items-center justify-between gap-3">
+        <label className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Switch checked={!!e.perSide} onCheckedChange={(v) => onPatch({ perSide: v })} />
+          Per side
+        </label>
+        <label className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Switch
+            checked={e.tempo === "3-1-3"}
+            onCheckedChange={(v) => onPatch({ tempo: v ? "3-1-3" : null })}
+          />
+          3-1-3 tempo
+        </label>
+        <div className="flex gap-2">
+          <button
+            onClick={onCopy}
+            className="flex size-10 items-center justify-center rounded-lg bg-secondary text-secondary-foreground"
+            aria-label={`Copy ${e.name}`}
+          >
+            <Copy className="size-4" />
+          </button>
+          <button
+            onClick={onRemove}
+            className="flex size-10 items-center justify-center rounded-lg bg-destructive/15 text-destructive"
+            aria-label="Remove exercise"
+          >
+            <Trash2 className="size-4" />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function SettingsPage() {
   const [templates, setTemplates] = useTemplates();
   const [settings, setSettings] = useSettings();
   const [openId, setOpenId] = useState<string | null>(null);
+  const [clipboard, setClipboard] = useState<Exercise | null>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 180, tolerance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
 
   const patchExercise = (tid: string, eid: string, patch: Partial<Exercise>) =>
     setTemplates((prev) =>
@@ -38,6 +192,32 @@ function SettingsPage() {
           : t,
       ),
     );
+
+  const handleDragEnd = (tid: string) => (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    setTemplates((prev) =>
+      prev.map((t) => {
+        if (t.id !== tid) return t;
+        const from = t.exercises.findIndex((e) => e.id === active.id);
+        const to = t.exercises.findIndex((e) => e.id === over.id);
+        if (from < 0 || to < 0) return t;
+        return { ...t, exercises: arrayMove(t.exercises, from, to) };
+      }),
+    );
+  };
+
+  const pasteInto = (tid: string) => {
+    if (!clipboard) return;
+    setTemplates((prev) =>
+      prev.map((t) =>
+        t.id === tid
+          ? { ...t, exercises: [...t.exercises, { ...clipboard, id: `${tid}-${Date.now()}` }] }
+          : t,
+      ),
+    );
+    toast.success(`${clipboard.name} pasted`);
+  };
 
   return (
     <div className="px-4 pt-8">
@@ -63,109 +243,60 @@ function SettingsPage() {
             </button>
             {openId === t.id && (
               <div className="space-y-4 border-t border-border p-4">
-                {t.exercises.map((e) => (
-                  <div key={e.id} className="rounded-xl bg-background/50 p-3">
-                    <input
-                      value={e.name}
-                      onChange={(ev) => patchExercise(t.id, e.id, { name: ev.target.value })}
-                      className="mb-3 w-full bg-transparent font-display text-lg font-semibold text-foreground outline-none"
-                    />
-                    <div className="grid grid-cols-2 gap-3">
-                      {e.kind === "timed" ? (
-                        <label className="text-xs text-muted-foreground">
-                          Duration (s)
-                          <input
-                            type="number"
-                            inputMode="numeric"
-                            className={numField}
-                            value={e.durationSec ?? 0}
-                            onChange={(ev) =>
-                              patchExercise(t.id, e.id, { durationSec: Number(ev.target.value) })
-                            }
-                          />
-                        </label>
-                      ) : (
-                        <>
-                          <label className="text-xs text-muted-foreground">
-                            Sets
-                            <input
-                              type="number"
-                              inputMode="numeric"
-                              className={numField}
-                              value={e.sets}
-                              onChange={(ev) =>
-                                patchExercise(t.id, e.id, { sets: Math.max(1, Number(ev.target.value)) })
-                              }
-                            />
-                          </label>
-                          <label className="text-xs text-muted-foreground">
-                            Reps
-                            <input
-                              className={numField}
-                              value={e.reps ?? ""}
-                              onChange={(ev) => patchExercise(t.id, e.id, { reps: ev.target.value })}
-                            />
-                          </label>
-                        </>
-                      )}
-                      <label className="text-xs text-muted-foreground">
-                        Weight (kg, blank = BW)
-                        <input
-                          type="number"
-                          inputMode="decimal"
-                          className={numField}
-                          value={e.weightKg ?? ""}
-                          onChange={(ev) =>
-                            patchExercise(t.id, e.id, {
-                              weightKg: ev.target.value === "" ? null : Number(ev.target.value),
-                            })
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  modifiers={[restrictToVerticalAxis, restrictToParentElement]}
+                  onDragEnd={handleDragEnd(t.id)}
+                >
+                  <SortableContext
+                    items={t.exercises.map((e) => e.id)}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    <div className="space-y-4">
+                      {t.exercises.map((e) => (
+                        <SortableExerciseRow
+                          key={e.id}
+                          exercise={e}
+                          onPatch={(patch) => patchExercise(t.id, e.id, patch)}
+                          onCopy={() => {
+                            setClipboard({ ...e });
+                            toast.success(`${e.name} copied`);
+                          }}
+                          onRemove={() =>
+                            setTemplates((prev) =>
+                              prev.map((tt) =>
+                                tt.id === t.id
+                                  ? { ...tt, exercises: tt.exercises.filter((x) => x.id !== e.id) }
+                                  : tt,
+                              ),
+                            )
                           }
                         />
-                      </label>
-                      <label className="text-xs text-muted-foreground">
-                        Rest (s)
-                        <input
-                          type="number"
-                          inputMode="numeric"
-                          className={numField}
-                          value={e.restSec}
-                          onChange={(ev) => patchExercise(t.id, e.id, { restSec: Number(ev.target.value) })}
-                        />
-                      </label>
+                      ))}
                     </div>
-                    <div className="mt-3 flex items-center justify-between gap-3">
-                      <label className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Switch
-                          checked={!!e.perSide}
-                          onCheckedChange={(v) => patchExercise(t.id, e.id, { perSide: v })}
-                        />
-                        Per side
-                      </label>
-                      <label className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Switch
-                          checked={e.tempo === "3-1-3"}
-                          onCheckedChange={(v) => patchExercise(t.id, e.id, { tempo: v ? "3-1-3" : null })}
-                        />
-                        3-1-3 tempo
-                      </label>
-                      <button
-                        onClick={() =>
-                          setTemplates((prev) =>
-                            prev.map((tt) =>
-                              tt.id === t.id
-                                ? { ...tt, exercises: tt.exercises.filter((x) => x.id !== e.id) }
-                                : tt,
-                            ),
-                          )
-                        }
-                        className="flex size-10 items-center justify-center rounded-lg bg-destructive/15 text-destructive"
-                        aria-label="Remove exercise"
-                      >
-                        <Trash2 className="size-4" />
-                      </button>
-                    </div>
+                  </SortableContext>
+                </DndContext>
+
+                {clipboard && (
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => pasteInto(t.id)}
+                      className="flex h-12 flex-1 items-center justify-center gap-2 rounded-xl border border-primary/40 bg-primary/10 px-3 text-sm font-semibold text-primary"
+                    >
+                      <ClipboardPaste className="size-4" />
+                      <span className="truncate">Paste “{clipboard.name}”</span>
+                    </button>
+                    <button
+                      onClick={() => setClipboard(null)}
+                      className="flex size-12 shrink-0 items-center justify-center rounded-xl border border-border text-muted-foreground"
+                      aria-label="Clear copied exercise"
+                    >
+                      <X className="size-4" />
+                    </button>
                   </div>
-                ))}
+                )}
+
                 <button
                   onClick={() =>
                     setTemplates((prev) =>
