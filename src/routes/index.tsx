@@ -6,6 +6,7 @@ import { useLogs, useSession, useSettings, useTemplates } from "@/lib/kb-store";
 import type { Biofeedback, Exercise, LoggedSet, Template, WorkoutLog } from "@/lib/kb-types";
 import { applyTemplateChanges, buildTemplateChanges } from "@/lib/kb-template-diff";
 import { RestTimer } from "@/components/kb/RestTimer";
+import { DrillTimer } from "@/components/kb/DrillTimer";
 import { Metronome } from "@/components/kb/Metronome";
 import { buzz, unlockAudio } from "@/lib/kb-feedback";
 import { Slider } from "@/components/ui/slider";
@@ -534,22 +535,43 @@ function WorkoutPage() {
             </div>
           </div>
 
-          <div className="mt-4 flex gap-3">
-            <button
-              onClick={() => bump("completed")}
-              disabled={setsLeft === 0}
-              className="flex h-20 flex-[2] items-center justify-center gap-2 rounded-2xl bg-primary text-xl font-bold text-primary-foreground disabled:opacity-40 active:scale-[0.99]"
-            >
-              <Check className="size-7" /> Complete Set
-            </button>
-            <button
-              onClick={() => bump("skipped")}
-              disabled={setsLeft === 0}
-              className="flex h-20 flex-1 flex-col items-center justify-center gap-1 rounded-2xl bg-secondary text-sm font-bold text-secondary-foreground disabled:opacity-40 active:scale-[0.99]"
-            >
-              <SkipForward className="size-6" /> Skip Set
-            </button>
-          </div>
+          {exercise.kind === "timed" ? (
+            <div className="mt-4 flex gap-3">
+              <div className="flex-[2]">
+                <DrillTimer
+                  key={`${exercise.id}-${prog?.completed ?? 0}`}
+                  seconds={exercise.durationSec ?? 60}
+                  sound={settings.soundEnabled}
+                  haptics={settings.hapticsEnabled}
+                  onComplete={() => bump("completed")}
+                />
+              </div>
+              <button
+                onClick={() => bump("skipped")}
+                disabled={setsLeft === 0}
+                className="mt-4 flex h-20 flex-1 flex-col items-center justify-center gap-1 self-start rounded-2xl bg-secondary text-sm font-bold text-secondary-foreground disabled:opacity-40 active:scale-[0.99]"
+              >
+                <SkipForward className="size-6" /> Skip Set
+              </button>
+            </div>
+          ) : (
+            <div className="mt-4 flex gap-3">
+              <button
+                onClick={() => bump("completed")}
+                disabled={setsLeft === 0}
+                className="flex h-20 flex-[2] items-center justify-center gap-2 rounded-2xl bg-primary text-xl font-bold text-primary-foreground disabled:opacity-40 active:scale-[0.99]"
+              >
+                <Check className="size-7" /> Complete Set
+              </button>
+              <button
+                onClick={() => bump("skipped")}
+                disabled={setsLeft === 0}
+                className="flex h-20 flex-1 flex-col items-center justify-center gap-1 rounded-2xl bg-secondary text-sm font-bold text-secondary-foreground disabled:opacity-40 active:scale-[0.99]"
+              >
+                <SkipForward className="size-6" /> Skip Set
+              </button>
+            </div>
+          )}
 
           <div className="mt-3 flex gap-3">
             <button
