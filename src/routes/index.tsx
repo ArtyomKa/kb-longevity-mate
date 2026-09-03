@@ -539,7 +539,7 @@ function WorkoutPage() {
             <div className="mt-4 flex gap-3">
               <div className="flex-[2]">
                 <DrillTimer
-                  key={`${exercise.id}-${prog?.setsCompleted ?? 0}`}
+                  key={`${exercise.id}-${prog?.completed ?? 0}`}
                   seconds={exercise.durationSec ?? 60}
                   sound={settings.soundEnabled}
                   haptics={settings.hapticsEnabled}
