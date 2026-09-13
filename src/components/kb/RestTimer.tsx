@@ -6,11 +6,12 @@ interface Props {
   seconds: number;
   sound: boolean;
   haptics: boolean;
+  nextPreview?: string;
   onDone: () => void;
   onDismiss: () => void;
 }
 
-export function RestTimer({ seconds, sound, haptics, onDone, onDismiss }: Props) {
+export function RestTimer({ seconds, sound, haptics, nextPreview, onDone, onDismiss }: Props) {
   const [total, setTotal] = useState(seconds);
   const [left, setLeft] = useState(seconds);
   const fired = useRef(false);
