@@ -94,6 +94,33 @@ function WorkoutPage() {
   /** planned sets for an exercise including sets added today */
   const setsFor = (e: Exercise) => e.sets + (progress[e.id]?.extraSets ?? 0);
 
+  /** build a short text preview of the upcoming set/exercise */
+  const nextPreview = useMemo(() => {
+    if (!active || !exercise) return "";
+    const p = progress[exercise.id] ?? emptyProgress();
+    const done = p.completed + p.skipped;
+    const total = setsFor(exercise);
+    const weight = p.weightKg ? `${p.weightKg} kg` : "BW";
+
+    if (done < total) {
+      return `${exercise.name} — Set ${done + 1} of ${total} · ${weight}`;
+    }
+
+    const nextIndex = index + 1;
+    if (nextIndex < active.exercises.length) {
+      const next = active.exercises[nextIndex];
+      const nextP = progress[next.id] ?? emptyProgress();
+      const nextWeight = nextP.weightKg ? `${nextP.weightKg} kg` : "BW";
+      const target =
+        next.kind === "timed"
+          ? `${Math.round((next.durationSec ?? 0) / 60)} min`
+          : `${next.reps}${next.perSide ? " / side" : ""}`;
+      return `${next.name} — ${target} · ${nextWeight}`;
+    }
+
+    return "Last set — finish strong";
+  }, [active, exercise, progress, index]);
+
   const templateChanges = useMemo(
     () => (active ? buildTemplateChanges(active, progress) : []),
     [active, progress],
