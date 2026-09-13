@@ -413,6 +413,7 @@ function WorkoutPage() {
           seconds={restFor}
           sound={settings.soundEnabled}
           haptics={settings.hapticsEnabled}
+          nextPreview={nextPreview}
           onDone={() => undefined}
           onDismiss={() => setRestFor(null)}
         />
