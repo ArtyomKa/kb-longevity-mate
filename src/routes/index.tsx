@@ -107,8 +107,8 @@ function WorkoutPage() {
     }
 
     const nextIndex = index + 1;
-    if (nextIndex < active.exercises.length) {
-      const next = active.exercises[nextIndex];
+    const next = active.exercises[nextIndex];
+    if (next) {
       const nextP = progress[next.id] ?? emptyProgress();
       const nextWeight = nextP.weightKg ? `${nextP.weightKg} kg` : "BW";
       const target =
