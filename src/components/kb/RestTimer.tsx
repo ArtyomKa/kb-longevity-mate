@@ -64,6 +64,16 @@ export function RestTimer({ seconds, sound, haptics, nextPreview, onDone, onDism
           <span className="text-sm uppercase tracking-widest text-muted-foreground">seconds</span>
         </div>
       </div>
+
+      {nextPreview && (
+        <div className="max-w-sm px-6 text-center">
+          <p className="text-sm uppercase tracking-widest text-muted-foreground">Next up</p>
+          <p className="mt-1 font-display text-xl font-bold leading-snug text-foreground">
+            {nextPreview}
+          </p>
+        </div>
+      )}
+
       <div className="flex w-full max-w-sm gap-3">
         <button
           onClick={() => {
