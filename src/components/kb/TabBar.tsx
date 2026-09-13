@@ -1,9 +1,10 @@
 import { Link } from "@tanstack/react-router";
-import { Dumbbell, History, Settings } from "lucide-react";
+import { Dumbbell, History, LineChart, Settings } from "lucide-react";
 
 const tabs = [
   { to: "/", label: "Workout", Icon: Dumbbell },
   { to: "/history", label: "History", Icon: History },
+  { to: "/progress", label: "Progress", Icon: LineChart },
   { to: "/settings", label: "Templates", Icon: Settings },
 ] as const;
 
@@ -16,7 +17,7 @@ export function TabBar() {
             key={to}
             to={to}
             activeOptions={{ exact: to === "/" }}
-            className="flex flex-1 flex-col items-center gap-1 py-3 text-xs font-semibold text-muted-foreground transition-colors"
+            className="flex flex-1 flex-col items-center gap-1 py-3 text-[11px] font-semibold text-muted-foreground transition-colors"
             activeProps={{ className: "!text-primary" }}
           >
             <Icon className="size-6" />
