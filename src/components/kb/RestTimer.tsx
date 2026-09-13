@@ -6,11 +6,12 @@ interface Props {
   seconds: number;
   sound: boolean;
   haptics: boolean;
+  nextPreview?: string;
   onDone: () => void;
   onDismiss: () => void;
 }
 
-export function RestTimer({ seconds, sound, haptics, onDone, onDismiss }: Props) {
+export function RestTimer({ seconds, sound, haptics, nextPreview, onDone, onDismiss }: Props) {
   const [total, setTotal] = useState(seconds);
   const [left, setLeft] = useState(seconds);
   const fired = useRef(false);
@@ -63,6 +64,16 @@ export function RestTimer({ seconds, sound, haptics, onDone, onDismiss }: Props)
           <span className="text-sm uppercase tracking-widest text-muted-foreground">seconds</span>
         </div>
       </div>
+
+      {nextPreview && (
+        <div className="max-w-sm px-6 text-center">
+          <p className="text-sm uppercase tracking-widest text-muted-foreground">Next up</p>
+          <p className="mt-1 font-display text-xl font-bold leading-snug text-foreground">
+            {nextPreview}
+          </p>
+        </div>
+      )}
+
       <div className="flex w-full max-w-sm gap-3">
         <button
           onClick={() => {
