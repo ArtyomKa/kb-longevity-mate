@@ -132,7 +132,7 @@ function ProgressPage() {
             DayButton: ({ day, modifiers, className, children, ...props }) => {
               const dayLogs = byDay.get(dayKey(day.date)) ?? [];
               return (
-                <button {...props} className={className} data-selected-single={modifiers.selected || undefined}>
+                <button {...props} className={className} data-selected-single={modifiers["selected"] || undefined}>
                   {children}
                   <span className="mt-0.5 flex h-1.5 items-center justify-center gap-0.5">
                     {dayLogs.slice(0, 3).map((l, i) => (
