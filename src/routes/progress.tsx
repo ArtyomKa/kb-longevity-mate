@@ -287,11 +287,11 @@ function ProgressPage() {
       <h2 className="mt-8 font-display text-2xl font-bold uppercase">Overall</h2>
       <div className="surface mt-3 rounded-2xl p-3">
         <p className="text-sm font-semibold">Energy, last {energy.length} sessions</p>
-        <div className="mt-2 h-28 w-full">
+        <div className="mt-2 h-32 w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={energy} margin={{ top: 4, right: 8, bottom: 0, left: -24 }}>
+            <LineChart data={energy} margin={{ top: 6, right: 12, bottom: 0, left: -24 }}>
               <XAxis dataKey="label" hide />
-              <YAxis domain={[0, 10]} tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} tickLine={false} axisLine={false} width={40} />
+              <YAxis domain={[0, 10]} ticks={[0, 5, 10]} tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} tickLine={false} axisLine={false} width={40} />
               <Tooltip
                 contentStyle={{
                   background: "var(--popover)",
