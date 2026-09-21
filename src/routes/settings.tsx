@@ -319,36 +319,54 @@ function SettingsPage() {
                   </div>
                 )}
 
-                <button
-                  onClick={() =>
-                    setTemplates((prev) =>
-                      prev.map((tt) =>
-                        tt.id === t.id
-                          ? {
-                              ...tt,
-                              exercises: [
-                                ...tt.exercises,
-                                {
-                                  id: `${t.id}-${Date.now()}`,
-                                  name: "New exercise",
-                                  kind: "reps",
-                                  sets: 3,
-                                  reps: "10",
-                                  perSide: false,
-                                  weightKg: settings.lightWeight,
-                                  tempo: null,
-                                  restSec: settings.defaultRestSec,
-                                },
-                              ],
-                            }
-                          : tt,
-                      ),
-                    )
-                  }
-                  className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-secondary font-semibold text-secondary-foreground"
-                >
-                  <Plus className="size-4" /> Add exercise
-                </button>
+                <div className="flex gap-2">
+                  {(["reps", "timed"] as const).map((kind) => (
+                    <button
+                      key={kind}
+                      onClick={() =>
+                        setTemplates((prev) =>
+                          prev.map((tt) =>
+                            tt.id === t.id
+                              ? {
+                                  ...tt,
+                                  exercises: [
+                                    ...tt.exercises,
+                                    kind === "timed"
+                                      ? {
+                                          id: `${t.id}-${Date.now()}`,
+                                          name: "New timed drill",
+                                          kind: "timed" as const,
+                                          durationSec: 120,
+                                          sets: 1,
+                                          perSide: false,
+                                          weightKg: null,
+                                          tempo: null,
+                                          restSec: 0,
+                                        }
+                                      : {
+                                          id: `${t.id}-${Date.now()}`,
+                                          name: "New exercise",
+                                          kind: "reps" as const,
+                                          sets: 3,
+                                          reps: "10",
+                                          perSide: false,
+                                          weightKg: settings.lightWeight,
+                                          tempo: null,
+                                          restSec: settings.defaultRestSec,
+                                        },
+                                  ],
+                                }
+                              : tt,
+                          ),
+                        )
+                      }
+                      className="flex h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-secondary text-sm font-semibold text-secondary-foreground"
+                    >
+                      <Plus className="size-4" /> {kind === "timed" ? "Timed drill" : "Exercise"}
+                    </button>
+                  ))}
+                </div>
+
               </div>
             )}
           </div>
