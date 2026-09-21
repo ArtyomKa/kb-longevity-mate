@@ -82,7 +82,29 @@ function SortableExerciseRow({
           className="w-full bg-transparent font-display text-lg font-semibold text-foreground outline-none"
         />
       </div>
+      <div className="mb-3 flex gap-2">
+        {(["reps", "timed"] as const).map((k) => (
+          <button
+            key={k}
+            onClick={() =>
+              onPatch(
+                k === "timed"
+                  ? { kind: "timed", durationSec: e.durationSec ?? 120, sets: 1 }
+                  : { kind: "reps", sets: e.sets || 3, reps: e.reps || "10" },
+              )
+            }
+            className={`h-9 flex-1 rounded-lg text-sm font-semibold ${
+              e.kind === k
+                ? "bg-primary text-primary-foreground"
+                : "bg-secondary text-muted-foreground"
+            }`}
+          >
+            {k === "reps" ? "Reps" : "Timed"}
+          </button>
+        ))}
+      </div>
       <div className="grid grid-cols-2 gap-3">
+
         {e.kind === "timed" ? (
           <label className="text-xs text-muted-foreground">
             Duration (s)
