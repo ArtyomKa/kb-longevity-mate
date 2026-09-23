@@ -1,9 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { ClipboardCheck, Copy, Trash2 } from "lucide-react";
+import { ClipboardCheck, Copy, Heart, Loader2, Trash2 } from "lucide-react";
 import { useLogs } from "@/lib/kb-store";
 import { buildWeeklyMarkdown, copyText, logsThisWeek } from "@/lib/kb-export";
+import { isHealthConnectAvailable, exportWorkoutToHealthConnect, openHealthConnectSettings } from "@/lib/health-connect";
 
 export const Route = createFileRoute("/history")({
   head: () => ({
@@ -24,7 +25,13 @@ export const Route = createFileRoute("/history")({
 function HistoryPage() {
   const [logs, setLogs] = useLogs();
   const [open, setOpen] = useState<string | null>(null);
+  const [hcAvailable, setHcAvailable] = useState<boolean | null>(null);
+  const [exportingId, setExportingId] = useState<string | null>(null);
   const week = useMemo(() => logsThisWeek(logs), [logs]);
+
+  useEffect(() => {
+    isHealthConnectAvailable().then(setHcAvailable).catch(() => setHcAvailable(false));
+  }, []);
 
   const sorted = [...logs].sort((a, b) => b.dateISO.localeCompare(a.dateISO));
 
@@ -106,7 +113,42 @@ function HistoryPage() {
                     </p>
                     <p>Joint/back: {log.biofeedback.jointNotes || "none"}</p>
                   </div>
-                  <div className="mt-4 flex gap-2">
+                  {hcAvailable && (
+                    <button
+                      disabled={exportingId === log.id}
+                      onClick={async () => {
+                        setExportingId(log.id);
+                        try {
+                          const ok = await exportWorkoutToHealthConnect(log);
+                          toast[ok ? "success" : "error"](
+                            ok ? "Exported to Google Health Connect" : "Export failed"
+                          );
+                        } catch (err: any) {
+                          if (err?.isSecurityException) {
+                            toast.error(err.message, {
+                              action: {
+                                label: "Open Settings",
+                                onClick: () => openHealthConnectSettings(),
+                              },
+                            });
+                          } else {
+                            toast.error(err.message || "Health Connect export failed");
+                          }
+                        } finally {
+                          setExportingId(null);
+                        }
+                      }}
+                      className="mt-3 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-green-600 font-semibold text-white active:scale-[0.99] disabled:opacity-60"
+                    >
+                      {exportingId === log.id ? (
+                        <Loader2 className="size-4 animate-spin" />
+                      ) : (
+                        <Heart className="size-4" />
+                      )}
+                      Export to Google Health
+                    </button>
+                  )}
+                  <div className="mt-3 flex gap-2">
                     <button
                       onClick={async () => {
                         const ok = await copyText(buildWeeklyMarkdown([log], new Date(log.dateISO)));

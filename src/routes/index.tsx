@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Check, ChevronRight, Minus, Plus, Repeat, SkipForward, Timer, Undo2, X } from "lucide-react";
+import { Check, ChevronRight, Heart, Loader2, Minus, Plus, Repeat, SkipForward, Timer, Undo2, X } from "lucide-react";
 import { useLogs, useSession, useSettings, useTemplates } from "@/lib/kb-store";
 import type { Biofeedback, Exercise, LoggedSet, Template, WorkoutLog } from "@/lib/kb-types";
 import { applyTemplateChanges, buildTemplateChanges } from "@/lib/kb-template-diff";
@@ -10,6 +10,7 @@ import { DrillTimer } from "@/components/kb/DrillTimer";
 import { Metronome } from "@/components/kb/Metronome";
 import { buzz, unlockAudio } from "@/lib/kb-feedback";
 import { Slider } from "@/components/ui/slider";
+import { isHealthConnectAvailable, exportWorkoutToHealthConnect, openHealthConnectSettings } from "@/lib/health-connect";
 
 
 export const Route = createFileRoute("/")({
@@ -77,6 +78,12 @@ function WorkoutPage() {
     legNotes: "",
     jointNotes: "",
   });
+  const [hcAvailable, setHcAvailable] = useState<boolean | null>(null);
+  const [exporting, setExporting] = useState(false);
+
+  useEffect(() => {
+    isHealthConnectAvailable().then(setHcAvailable).catch(() => setHcAvailable(false));
+  }, []);
 
   const active = useMemo(
     () => templates.find((t) => t.id === session?.templateId) ?? null,
@@ -213,8 +220,8 @@ function WorkoutPage() {
     patchProgress(exercise.id, { extraSets: extra - 1 });
   };
 
-  const saveWorkout = () => {
-    if (!active) return;
+  const buildWorkoutLog = (): WorkoutLog | null => {
+    if (!active) return null;
     const entries: LoggedSet[] = active.exercises.map((e) => {
       const p = progress[e.id];
       return {
@@ -228,7 +235,7 @@ function WorkoutPage() {
         rpe: p?.rpe ?? null,
       };
     });
-    const log: WorkoutLog = {
+    return {
       id: `${Date.now()}`,
       dateISO: new Date().toISOString(),
       templateId: active.id,
@@ -237,12 +244,15 @@ function WorkoutPage() {
       entries,
       biofeedback: bio,
     };
+  };
+
+  const finalizeWorkout = (log: WorkoutLog, exported = false) => {
     setLogs((prev) => [log, ...prev]);
 
     const selected = templateChanges.filter((c) => acceptedChanges[c.key]);
     if (selected.length) {
       setTemplates((prev) =>
-        prev.map((t) => (t.id === active.id ? applyTemplateChanges(t, selected) : t)),
+        prev.map((t) => (t.id === active!.id ? applyTemplateChanges(t, selected) : t)),
       );
     }
 
@@ -250,11 +260,42 @@ function WorkoutPage() {
     setFinishing(false);
     setAcceptedChanges({});
     setBio({ energy: 7, legCompensation: "none", legNotes: "", jointNotes: "" });
-    toast.success(
-      selected.length
-        ? `Session saved · ${selected.length} template change${selected.length === 1 ? "" : "s"} applied`
-        : "Session saved to History",
-    );
+
+    let msg = selected.length
+      ? `Session saved · ${selected.length} template change${selected.length === 1 ? "" : "s"} applied`
+      : "Session saved to History";
+    if (exported) msg += " · Exported to Health Connect";
+    toast.success(msg);
+  };
+
+  const saveWorkout = () => {
+    const log = buildWorkoutLog();
+    if (!log) return;
+    finalizeWorkout(log);
+  };
+
+  const saveAndExportWorkout = async () => {
+    const log = buildWorkoutLog();
+    if (!log) return;
+    setExporting(true);
+    try {
+      await exportWorkoutToHealthConnect(log);
+      finalizeWorkout(log, true);
+    } catch (err: any) {
+      if (err?.isSecurityException) {
+        toast.error(err.message, {
+          action: {
+            label: "Open Settings",
+            onClick: () => openHealthConnectSettings(),
+          },
+        });
+      } else {
+        toast.error(err.message || "Health Connect export failed");
+      }
+      finalizeWorkout(log);
+    } finally {
+      setExporting(false);
+    }
   };
 
 
@@ -388,13 +429,29 @@ function WorkoutPage() {
 
         <button
           onClick={saveWorkout}
-          className="mt-5 h-16 w-full rounded-2xl bg-primary text-lg font-bold text-primary-foreground active:scale-[0.99]"
+          disabled={exporting}
+          className="mt-5 h-16 w-full rounded-2xl bg-primary text-lg font-bold text-primary-foreground active:scale-[0.99] disabled:opacity-60"
         >
           Save session
         </button>
+        {hcAvailable && (
+          <button
+            onClick={saveAndExportWorkout}
+            disabled={exporting}
+            className="mt-3 flex h-16 w-full items-center justify-center gap-3 rounded-2xl bg-green-600 text-lg font-bold text-white active:scale-[0.99] disabled:opacity-60"
+          >
+            {exporting ? (
+              <Loader2 className="size-5 animate-spin" />
+            ) : (
+              <Heart className="size-5" />
+            )}
+            Save & Export to Google Health
+          </button>
+        )}
         <button
           onClick={() => setFinishing(false)}
-          className="mt-2 h-12 w-full rounded-xl text-sm font-semibold text-muted-foreground"
+          disabled={exporting}
+          className="mt-2 h-12 w-full rounded-xl text-sm font-semibold text-muted-foreground disabled:opacity-60"
         >
           Back to workout
         </button>
