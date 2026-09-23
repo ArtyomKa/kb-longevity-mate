@@ -25,6 +25,8 @@ import { useSettings, useTemplates } from "@/lib/kb-store";
 import { DEFAULT_TEMPLATES, type Exercise } from "@/lib/kb-types";
 import { Switch } from "@/components/ui/switch";
 import { ImportPlanCard } from "@/components/kb/ImportPlanCard";
+import { BackupCard } from "@/components/kb/BackupCard";
+
 
 export const Route = createFileRoute("/settings")({
   head: () => ({
@@ -246,9 +248,11 @@ function SettingsPage() {
       <h1 className="font-display text-4xl font-bold uppercase">Templates</h1>
       <p className="mt-1 text-sm text-muted-foreground">Tune your routines and session preferences.</p>
 
-      <div className="mt-5">
+      <div className="mt-5 space-y-3">
         <ImportPlanCard />
+        <BackupCard />
       </div>
+
 
       <div className="mt-3 space-y-3">
         {templates.map((t) => (
