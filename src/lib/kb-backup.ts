@@ -144,7 +144,15 @@ export function parseBackup(raw: string, defaults: { restSec: number }): BackupP
     data: {
       templates,
       logs,
-      settings: settings ? { ...DEFAULT_SETTINGS, ...settings } : null,
+      settings: settings
+        ? {
+            ...DEFAULT_SETTINGS,
+            ...(Object.fromEntries(
+              Object.entries(settings).filter(([, v]) => v !== undefined),
+            ) as Partial<Settings>),
+          }
+        : null,
+
     },
   };
 }
