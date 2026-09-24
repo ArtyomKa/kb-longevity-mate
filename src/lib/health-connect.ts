@@ -87,26 +87,6 @@ export async function exportWorkoutToHealthConnect(
 ): Promise<boolean> {
   console.log("[HealthConnect] Starting export...");
 
-  const availableResult = await isHealthConnectAvailable();
-  if (!availableResult.available) {
-    const status = availableResult.status || "UNKNOWN";
-    const err = new Error(
-      `Health Connect not available (status: ${status}). Check logcat for details.`
-    ) as any;
-    err.isNotInstalled = true;
-    err.status = status;
-    throw err;
-  }
-
-  const granted = await requestHealthConnectPermissions();
-  if (!granted) {
-    const err = new Error(
-      "Health Connect permissions needed. Tap Open Settings to grant them, then try again."
-    );
-    (err as any).isPermissionDenied = true;
-    throw err;
-  }
-
   const startTime = log.dateISO;
   const endTime = new Date(
     new Date(log.dateISO).getTime() + log.durationSec * 1000
@@ -124,14 +104,6 @@ export async function exportWorkoutToHealthConnect(
 
   // Debug logging for bridge payload
   console.log("[HealthConnect] Export payload:", JSON.stringify(payload, null, 2));
-  console.log("[HealthConnect] Mapping:", {
-    templateId: log.templateId,
-    mappedExerciseType: exerciseType,
-    exerciseTypeLabel: getExerciseTypeLabel(exerciseType),
-    durationSec: log.durationSec,
-    startTimestamp: new Date(startTime).toISOString(),
-    endTimestamp: endTime,
-  });
 
   const { HealthConnect } = await getCapacitorModules();
   try {
@@ -144,14 +116,16 @@ export async function exportWorkoutToHealthConnect(
     if (
       message.includes("SecurityException") ||
       message.includes("permission") ||
-      message.includes("PERMISSION")
+      message.includes("PERMISSION") ||
+      message.includes("PERMISSION_DENIED")
     ) {
       const securityErr = new Error(
-        "Health Connect write blocked. Please open Android Settings → Privacy → Health Connect and grant Exercise permissions for this app."
+        "Health Connect permission needed. Tap Open Settings, then enable Exercise permissions for this app."
       );
       (securityErr as any).isSecurityException = true;
       throw securityErr;
     }
+    // For any other error (including client creation failure), just wrap it
     throw err;
   }
 }
