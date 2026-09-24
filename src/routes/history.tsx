@@ -120,7 +120,7 @@ function HistoryPage() {
                             ok ? "Exported to Google Health Connect" : "Export failed"
                           );
                         } catch (err: any) {
-                          if (err?.isSecurityException) {
+                          if (err?.isSecurityException || err?.isPermissionDenied) {
                             const toastId = toast.error(
                               "Health Connect: Permission needed. Tap Open Settings to grant access.",
                               {
