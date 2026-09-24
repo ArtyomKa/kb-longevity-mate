@@ -120,7 +120,14 @@ function HistoryPage() {
                             ok ? "Exported to Google Health Connect" : "Export failed"
                           );
                         } catch (err: any) {
-                          if (err?.isSecurityException || err?.isPermissionDenied) {
+                          if (err?.isNotInstalled) {
+                            toast.error("Google Health Connect app not installed", {
+                              action: {
+                                label: "Get from Play Store",
+                                onClick: () => window.open("https://play.google.com/store/apps/details?id=com.google.android.apps.healthdata", "_blank"),
+                              },
+                            });
+                          } else if (err?.isSecurityException || err?.isPermissionDenied) {
                             toast.error(err.message, {
                               action: {
                                 label: "Open Settings",

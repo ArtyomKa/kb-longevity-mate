@@ -89,9 +89,11 @@ export async function exportWorkoutToHealthConnect(
 
   const available = await isHealthConnectAvailable();
   if (!available) {
-    throw new Error(
-      "Google Health Connect is not available. Make sure you're on Android 9+ and the Health Connect app is installed."
-    );
+    const err = new Error(
+      "Health Connect not found. Please install Google's Health Connect app from Play Store first."
+    ) as any;
+    err.isNotInstalled = true;
+    throw err;
   }
 
   const granted = await requestHealthConnectPermissions();
