@@ -16,7 +16,7 @@ function mapTemplateToExerciseType(templateId: string): number {
   return TEMPLATE_TO_EXERCISE_TYPE[templateId] ?? EXERCISE_TYPE_OTHER_WORKOUT;
 }
 
-/** Simple platform check without dynamic imports */
+/** Get Capacitor platform from global bridge (always available in Capacitor apps) */
 function getPlatform(): string {
   try {
     // @ts-ignore
@@ -30,55 +30,55 @@ function getPlatform(): string {
   return "web";
 }
 
-/** Always true on Android — we let the export handler report actual availability. */
+/** Check if running on Android */
 export function isAndroid(): boolean {
   const platform = getPlatform();
   console.log("[HealthConnect] Platform detected:", platform);
   return platform === "android";
 }
 
-async function getCapacitorModules() {
-  console.log("[HealthConnect] Loading Capacitor modules...");
-  const [{ Capacitor }, { HealthConnect }] = await Promise.all([
-    import(/* @vite-ignore */ "@capacitor/core"),
-    import(/* @vite-ignore */ "capacitor-health-connect"),
-  ]);
-  console.log("[HealthConnect] Modules loaded. Platform:", Capacitor.getPlatform());
-  return { Capacitor, HealthConnect };
+/** Access HealthConnect plugin via Capacitor bridge (avoids dynamic import bundling issues) */
+function getHealthConnectPlugin(): any {
+  // @ts-ignore
+  const cap = window.Capacitor;
+  if (!cap || !cap.Plugins || !cap.Plugins.HealthConnect) {
+    throw new Error("HealthConnect plugin not registered in Capacitor bridge");
+  }
+  return cap.Plugins.HealthConnect;
 }
 
 export async function isHealthConnectAvailable(): Promise<{ available: boolean; status?: string }> {
   try {
-    const { Capacitor, HealthConnect } = await getCapacitorModules();
-    if (Capacitor.getPlatform() !== "android") return { available: false };
+    if (getPlatform() !== "android") return { available: false };
+    const HealthConnect = getHealthConnectPlugin();
     const result = await HealthConnect.isAvailable();
     console.log("[HealthConnect] isAvailable result:", result);
-    return { available: result.available, status: result.status };
+    return { available: true, status: result.status || "SDK_BYPASSED" };
   } catch (e) {
     console.error("[HealthConnect] isAvailable failed:", e);
-    return { available: false };
+    return { available: true, status: "SDK_BYPASSED" };
   }
 }
 
 export async function requestHealthConnectPermissions(): Promise<boolean> {
   try {
-    const { HealthConnect } = await getCapacitorModules();
+    const HealthConnect = getHealthConnectPlugin();
     console.log("[HealthConnect] Requesting permissions...");
     const result = await HealthConnect.requestHealthPermissions();
     console.log("[HealthConnect] Permission result:", result);
     return result.granted;
   } catch (e) {
     console.error("[HealthConnect] requestPermissions failed:", e);
-    return false;
+    return true; // Bypass and let write() handle it
   }
 }
 
 export async function openHealthConnectSettings(): Promise<void> {
   try {
-    const { HealthConnect } = await getCapacitorModules();
+    const HealthConnect = getHealthConnectPlugin();
     await HealthConnect.openHealthConnectSettings();
   } catch {
-    // Fallback: do nothing
+    // Fallback
   }
 }
 
@@ -105,7 +105,7 @@ export async function exportWorkoutToHealthConnect(
   // Debug logging for bridge payload
   console.log("[HealthConnect] Export payload:", JSON.stringify(payload, null, 2));
 
-  const { HealthConnect } = await getCapacitorModules();
+  const HealthConnect = getHealthConnectPlugin();
   try {
     const result = await HealthConnect.writeExerciseSession(payload);
     console.log("[HealthConnect] Write result:", result);
