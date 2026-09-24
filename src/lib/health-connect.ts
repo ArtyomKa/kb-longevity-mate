@@ -89,6 +89,17 @@ export async function exportWorkoutToHealthConnect(
 ): Promise<boolean> {
   console.log("[HealthConnect] Starting export...");
 
+  // First, try to request permissions (this registers app in Health Connect)
+  console.log("[HealthConnect] Requesting permissions first...");
+  const granted = await requestHealthConnectPermissions();
+  if (!granted) {
+    const err = new Error(
+      "Health Connect permission needed. Tap Open Settings to grant access, then retry."
+    ) as any;
+    err.isPermissionDenied = true;
+    throw err;
+  }
+
   const startTime = log.dateISO;
   const endTime = new Date(
     new Date(log.dateISO).getTime() + log.durationSec * 1000
@@ -104,7 +115,6 @@ export async function exportWorkoutToHealthConnect(
     notes: buildNotes(log),
   };
 
-  // Debug logging for bridge payload
   console.log("[HealthConnect] Export payload:", JSON.stringify(payload, null, 2));
 
   const HealthConnect = getHealthConnectPlugin();
@@ -127,7 +137,6 @@ export async function exportWorkoutToHealthConnect(
       (securityErr as any).isSecurityException = true;
       throw securityErr;
     }
-    // For any other error (including client creation failure), just wrap it
     throw err;
   }
 }
