@@ -1,19 +1,15 @@
 import type { WorkoutLog } from "./kb-types";
 
-// Google Health Connect ExerciseType constants
-// https://developer.android.com/reference/kotlin/androidx/health/connect/client/records/ExerciseSessionRecord.Companion
-export const EXERCISE_TYPE_OTHER_WORKOUT = 0;
-export const EXERCISE_TYPE_STRENGTH_TRAINING = 56;
-export const EXERCISE_TYPE_HIGH_INTENSITY_INTERVAL_TRAINING = 24;
-
-const TEMPLATE_TO_EXERCISE_TYPE: Record<string, number> = {
-  "day-a": EXERCISE_TYPE_STRENGTH_TRAINING,
-  "day-b": EXERCISE_TYPE_STRENGTH_TRAINING,
-  "day-c": EXERCISE_TYPE_STRENGTH_TRAINING,
+// Google Health Connect ExerciseType mapping
+// Using SDK constants directly on Kotlin side for Samsung compatibility
+const TEMPLATE_TO_EXERCISE_TYPE: Record<string, string> = {
+  "day-a": "strength_training",
+  "day-b": "strength_training",
+  "day-c": "strength_training",
 };
 
-function mapTemplateToExerciseType(templateId: string): number {
-  return TEMPLATE_TO_EXERCISE_TYPE[templateId] ?? EXERCISE_TYPE_OTHER_WORKOUT;
+function mapTemplateToExerciseType(templateId: string): string {
+  return TEMPLATE_TO_EXERCISE_TYPE[templateId] ?? "other";
 }
 
 /** Get Capacitor platform from global bridge (always available in Capacitor apps) */
@@ -110,12 +106,12 @@ export async function exportWorkoutToHealthConnect(
     new Date(log.dateISO).getTime() + log.durationSec * 1000
   ).toISOString();
 
-  const exerciseType = mapTemplateToExerciseType(log.templateId);
+  const exerciseTypeName = mapTemplateToExerciseType(log.templateId);
 
   const payload = {
     startTime,
     endTime,
-    exerciseType,
+    exerciseTypeName,
     title: log.templateName,
     notes: buildNotes(log),
   };
