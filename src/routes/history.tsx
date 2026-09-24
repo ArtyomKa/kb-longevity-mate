@@ -121,17 +121,22 @@ function HistoryPage() {
                           );
                         } catch (err: any) {
                           if (err?.isSecurityException) {
-                            toast.error(
-                              "Health Connect: Permission needed\n\n" +
-                              "Samsung S26 Ultra manual steps:\n" +
-                              "1. Close this app\n" +
-                              "2. Open Android Settings\n" +
-                              "3. Privacy → Permission manager\n" +
-                              "4. Scroll down → Health Connect\n" +
-                              "5. Find 'Kettlebell Longevity Tracker'\n" +
-                              "6. Turn ON 'Allow'\n" +
-                              "7. Return to app and retry",
-                              { duration: 15000 }
+                            const toastId = toast.error(
+                              "Health Connect: Permission needed. Tap Open Settings to grant access.",
+                              {
+                                duration: 10000,
+                                action: {
+                                  label: "Open Settings",
+                                  onClick: async () => {
+                                    try {
+                                      await openHealthConnectSettings();
+                                      toast.dismiss(toastId);
+                                    } catch (e: any) {
+                                      toast.error(e.message || "Could not open. Go to Settings → Privacy → Health Connect manually.");
+                                    }
+                                  },
+                                },
+                              }
                             );
                           } else {
                             toast.error(err.message || "Health Connect export failed");
