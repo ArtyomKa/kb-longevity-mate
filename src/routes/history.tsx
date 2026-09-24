@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { ClipboardCheck, Copy, Heart, Loader2, Trash2 } from "lucide-react";
 import { useLogs } from "@/lib/kb-store";
 import { buildWeeklyMarkdown, copyText, logsThisWeek } from "@/lib/kb-export";
-import { isHealthConnectAvailable, exportWorkoutToHealthConnect, openHealthConnectSettings } from "@/lib/health-connect";
+import { isAndroid, exportWorkoutToHealthConnect, openHealthConnectSettings } from "@/lib/health-connect";
 
 export const Route = createFileRoute("/history")({
   head: () => ({
@@ -25,13 +25,9 @@ export const Route = createFileRoute("/history")({
 function HistoryPage() {
   const [logs, setLogs] = useLogs();
   const [open, setOpen] = useState<string | null>(null);
-  const [hcAvailable, setHcAvailable] = useState<boolean | null>(null);
+  const isAndroidDevice = isAndroid();
   const [exportingId, setExportingId] = useState<string | null>(null);
   const week = useMemo(() => logsThisWeek(logs), [logs]);
-
-  useEffect(() => {
-    isHealthConnectAvailable().then(setHcAvailable).catch(() => setHcAvailable(false));
-  }, []);
 
   const sorted = [...logs].sort((a, b) => b.dateISO.localeCompare(a.dateISO));
 
@@ -113,7 +109,7 @@ function HistoryPage() {
                     </p>
                     <p>Joint/back: {log.biofeedback.jointNotes || "none"}</p>
                   </div>
-                  {hcAvailable && (
+                  {isAndroidDevice && (
                     <button
                       disabled={exportingId === log.id}
                       onClick={async () => {
@@ -124,7 +120,7 @@ function HistoryPage() {
                             ok ? "Exported to Google Health Connect" : "Export failed"
                           );
                         } catch (err: any) {
-                          if (err?.isSecurityException) {
+                          if (err?.isSecurityException || err?.isPermissionDenied) {
                             toast.error(err.message, {
                               action: {
                                 label: "Open Settings",

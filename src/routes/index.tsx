@@ -10,7 +10,7 @@ import { DrillTimer } from "@/components/kb/DrillTimer";
 import { Metronome } from "@/components/kb/Metronome";
 import { buzz, unlockAudio } from "@/lib/kb-feedback";
 import { Slider } from "@/components/ui/slider";
-import { isHealthConnectAvailable, exportWorkoutToHealthConnect, openHealthConnectSettings } from "@/lib/health-connect";
+import { isAndroid, exportWorkoutToHealthConnect, openHealthConnectSettings } from "@/lib/health-connect";
 
 
 export const Route = createFileRoute("/")({
@@ -78,12 +78,8 @@ function WorkoutPage() {
     legNotes: "",
     jointNotes: "",
   });
-  const [hcAvailable, setHcAvailable] = useState<boolean | null>(null);
+  const isAndroidDevice = isAndroid();
   const [exporting, setExporting] = useState(false);
-
-  useEffect(() => {
-    isHealthConnectAvailable().then(setHcAvailable).catch(() => setHcAvailable(false));
-  }, []);
 
   const active = useMemo(
     () => templates.find((t) => t.id === session?.templateId) ?? null,
@@ -282,7 +278,7 @@ function WorkoutPage() {
       await exportWorkoutToHealthConnect(log);
       finalizeWorkout(log, true);
     } catch (err: any) {
-      if (err?.isSecurityException) {
+      if (err?.isSecurityException || err?.isPermissionDenied) {
         toast.error(err.message, {
           action: {
             label: "Open Settings",
@@ -434,7 +430,7 @@ function WorkoutPage() {
         >
           Save session
         </button>
-        {hcAvailable && (
+        {isAndroidDevice && (
           <button
             onClick={saveAndExportWorkout}
             disabled={exporting}

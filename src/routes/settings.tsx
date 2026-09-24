@@ -27,7 +27,6 @@ import { Switch } from "@/components/ui/switch";
 import { ImportPlanCard } from "@/components/kb/ImportPlanCard";
 import { BackupCard } from "@/components/kb/BackupCard";
 
-
 export const Route = createFileRoute("/settings")({
   head: () => ({
     meta: [

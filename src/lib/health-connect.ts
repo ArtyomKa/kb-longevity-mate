@@ -16,11 +16,34 @@ function mapTemplateToExerciseType(templateId: string): number {
   return TEMPLATE_TO_EXERCISE_TYPE[templateId] ?? EXERCISE_TYPE_OTHER_WORKOUT;
 }
 
+/** Simple platform check without dynamic imports */
+function getPlatform(): string {
+  try {
+    // @ts-ignore
+    const cap = window.Capacitor;
+    if (cap && cap.getPlatform) {
+      return cap.getPlatform();
+    }
+  } catch {
+    // ignore
+  }
+  return "web";
+}
+
+/** Always true on Android — we let the export handler report actual availability. */
+export function isAndroid(): boolean {
+  const platform = getPlatform();
+  console.log("[HealthConnect] Platform detected:", platform);
+  return platform === "android";
+}
+
 async function getCapacitorModules() {
+  console.log("[HealthConnect] Loading Capacitor modules...");
   const [{ Capacitor }, { HealthConnect }] = await Promise.all([
     import(/* @vite-ignore */ "@capacitor/core"),
     import(/* @vite-ignore */ "capacitor-health-connect"),
   ]);
+  console.log("[HealthConnect] Modules loaded. Platform:", Capacitor.getPlatform());
   return { Capacitor, HealthConnect };
 }
 
@@ -29,8 +52,10 @@ export async function isHealthConnectAvailable(): Promise<boolean> {
     const { Capacitor, HealthConnect } = await getCapacitorModules();
     if (Capacitor.getPlatform() !== "android") return false;
     const result = await HealthConnect.isAvailable();
+    console.log("[HealthConnect] isAvailable result:", result);
     return result.available;
-  } catch {
+  } catch (e) {
+    console.error("[HealthConnect] isAvailable failed:", e);
     return false;
   }
 }
@@ -38,9 +63,12 @@ export async function isHealthConnectAvailable(): Promise<boolean> {
 export async function requestHealthConnectPermissions(): Promise<boolean> {
   try {
     const { HealthConnect } = await getCapacitorModules();
+    console.log("[HealthConnect] Requesting permissions...");
     const result = await HealthConnect.requestHealthPermissions();
+    console.log("[HealthConnect] Permission result:", result);
     return result.granted;
-  } catch {
+  } catch (e) {
+    console.error("[HealthConnect] requestPermissions failed:", e);
     return false;
   }
 }
@@ -57,11 +85,23 @@ export async function openHealthConnectSettings(): Promise<void> {
 export async function exportWorkoutToHealthConnect(
   log: WorkoutLog
 ): Promise<boolean> {
+  console.log("[HealthConnect] Starting export...");
+
   const available = await isHealthConnectAvailable();
-  if (!available) throw new Error("Health Connect is not available on this device");
+  if (!available) {
+    throw new Error(
+      "Google Health Connect is not available. Make sure you're on Android 9+ and the Health Connect app is installed."
+    );
+  }
 
   const granted = await requestHealthConnectPermissions();
-  if (!granted) throw new Error("Health Connect permissions were denied");
+  if (!granted) {
+    const err = new Error(
+      "Health Connect permissions needed. Tap Open Settings to grant them, then try again."
+    );
+    (err as any).isPermissionDenied = true;
+    throw err;
+  }
 
   const startTime = log.dateISO;
   const endTime = new Date(
@@ -103,7 +143,7 @@ export async function exportWorkoutToHealthConnect(
       message.includes("PERMISSION")
     ) {
       const securityErr = new Error(
-        "Health Connect permissions blocked. Please open Android Settings → Privacy → Health Connect and grant permissions for this app."
+        "Health Connect write blocked. Please open Android Settings → Privacy → Health Connect and grant Exercise permissions for this app."
       );
       (securityErr as any).isSecurityException = true;
       throw securityErr;
