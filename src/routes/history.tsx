@@ -121,21 +121,35 @@ function HistoryPage() {
                           );
                         } catch (err: any) {
                           if (err?.isSecurityException || err?.isPermissionDenied) {
+                            const needsManual = err?.needsManualGrant;
                             const toastId = toast.error(
-                              "Health Connect: Permission needed. Tap Open Settings to grant access.",
+                              needsManual 
+                                ? "Health Connect: Please enable permissions in the settings screen that opened, then retry."
+                                : "Health Connect: Permission needed. Tap Open Settings to grant access.",
                               {
-                                duration: 10000,
-                                action: {
-                                  label: "Open Settings",
-                                  onClick: async () => {
-                                    try {
-                                      await openHealthConnectSettings();
-                                      toast.dismiss(toastId);
-                                    } catch (e: any) {
-                                      toast.error(e.message || "Could not open. Go to Settings → Privacy → Health Connect manually.");
+                                duration: needsManual ? 15000 : 10000,
+                                action: needsManual 
+                                  ? {
+                                      label: "Open Settings Again",
+                                      onClick: async () => {
+                                        try {
+                                          await openHealthConnectSettings();
+                                        } catch (e: any) {
+                                          toast.error(e.message || "Could not open settings");
+                                        }
+                                      },
                                     }
-                                  },
-                                },
+                                  : {
+                                      label: "Open Settings",
+                                      onClick: async () => {
+                                        try {
+                                          await openHealthConnectSettings();
+                                          toast.dismiss(toastId);
+                                        } catch (e: any) {
+                                          toast.error(e.message || "Could not open. Go to Settings → Privacy → Health Connect manually.");
+                                        }
+                                      },
+                                    },
                               }
                             );
                           } else {

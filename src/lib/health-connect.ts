@@ -60,16 +60,20 @@ export async function isHealthConnectAvailable(): Promise<{ available: boolean; 
   }
 }
 
-export async function requestHealthConnectPermissions(): Promise<boolean> {
+export async function requestHealthConnectPermissions(): Promise<{ granted: boolean; needsManualGrant?: boolean; message?: string }> {
   try {
     const HealthConnect = getHealthConnectPlugin();
     console.log("[HealthConnect] Requesting permissions...");
     const result = await HealthConnect.requestHealthPermissions();
     console.log("[HealthConnect] Permission result:", result);
-    return result.granted;
+    return { 
+      granted: result.granted, 
+      needsManualGrant: result.needsManualGrant,
+      message: result.message 
+    };
   } catch (e) {
     console.error("[HealthConnect] requestPermissions failed:", e);
-    return true; // Bypass and let write() handle it
+    return { granted: false };
   }
 }
 
@@ -91,12 +95,13 @@ export async function exportWorkoutToHealthConnect(
 
   // First, try to request permissions (this registers app in Health Connect)
   console.log("[HealthConnect] Requesting permissions first...");
-  const granted = await requestHealthConnectPermissions();
-  if (!granted) {
+  const permResult = await requestHealthConnectPermissions();
+  if (!permResult.granted) {
     const err = new Error(
-      "Health Connect permission needed. Tap Open Settings to grant access, then retry."
+      permResult.message || "Health Connect permission needed. Tap Open Settings to grant access, then retry."
     ) as any;
     err.isPermissionDenied = true;
+    err.needsManualGrant = permResult.needsManualGrant;
     throw err;
   }
 
