@@ -121,19 +121,24 @@ function HistoryPage() {
                           );
                         } catch (err: any) {
                           if (err?.isSecurityException) {
-                            toast.error(err.message, {
-                              duration: 6000,
-                              action: {
-                                label: "Open Settings",
-                                onClick: async () => {
-                                  try {
-                                    await openHealthConnectSettings();
-                                  } catch (settingsErr: any) {
-                                    toast.error(settingsErr.message || "Could not open settings. Please go to Android Settings → Privacy → Health Connect manually.");
-                                  }
+                            toast.error(
+                              "Health Connect permission needed.\n\n" +
+                              "Samsung/One UI: Go to Settings → Privacy → Permission manager → Health Connect → [Turn on Exercise]\n\n" +
+                              "Tap Open Settings to try...",
+                              {
+                                duration: 10000,
+                                action: {
+                                  label: "Open Settings",
+                                  onClick: async () => {
+                                    try {
+                                      await openHealthConnectSettings();
+                                    } catch (settingsErr: any) {
+                                      toast.error("Could not open automatically. Please manually go to Settings → Privacy → Permission manager → Health Connect");
+                                    }
+                                  },
                                 },
-                              },
-                            });
+                              }
+                            );
                           } else {
                             toast.error(err.message || "Health Connect export failed");
                           }
