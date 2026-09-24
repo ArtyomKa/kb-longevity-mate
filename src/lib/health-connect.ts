@@ -47,16 +47,16 @@ async function getCapacitorModules() {
   return { Capacitor, HealthConnect };
 }
 
-export async function isHealthConnectAvailable(): Promise<boolean> {
+export async function isHealthConnectAvailable(): Promise<{ available: boolean; status?: string }> {
   try {
     const { Capacitor, HealthConnect } = await getCapacitorModules();
-    if (Capacitor.getPlatform() !== "android") return false;
+    if (Capacitor.getPlatform() !== "android") return { available: false };
     const result = await HealthConnect.isAvailable();
     console.log("[HealthConnect] isAvailable result:", result);
-    return result.available;
+    return { available: result.available, status: result.status };
   } catch (e) {
     console.error("[HealthConnect] isAvailable failed:", e);
-    return false;
+    return { available: false };
   }
 }
 
@@ -87,12 +87,14 @@ export async function exportWorkoutToHealthConnect(
 ): Promise<boolean> {
   console.log("[HealthConnect] Starting export...");
 
-  const available = await isHealthConnectAvailable();
-  if (!available) {
+  const availableResult = await isHealthConnectAvailable();
+  if (!availableResult.available) {
+    const status = availableResult.status || "UNKNOWN";
     const err = new Error(
-      "Health Connect not found. Please install Google's Health Connect app from Play Store first."
+      `Health Connect not available (status: ${status}). Check logcat for details.`
     ) as any;
     err.isNotInstalled = true;
+    err.status = status;
     throw err;
   }
 

@@ -121,7 +121,9 @@ function HistoryPage() {
                           );
                         } catch (err: any) {
                           if (err?.isNotInstalled) {
-                            toast.error("Google Health Connect app not installed", {
+                            const statusMsg = err.status ? ` (${err.status})` : "";
+                            toast.error(`Health Connect not available${statusMsg}`, {
+                              duration: 5000,
                               action: {
                                 label: "Get from Play Store",
                                 onClick: () => window.open("https://play.google.com/store/apps/details?id=com.google.android.apps.healthdata", "_blank"),
