@@ -125,7 +125,13 @@ function HistoryPage() {
                               duration: 6000,
                               action: {
                                 label: "Open Settings",
-                                onClick: () => openHealthConnectSettings(),
+                                onClick: async () => {
+                                  try {
+                                    await openHealthConnectSettings();
+                                  } catch (settingsErr: any) {
+                                    toast.error(settingsErr.message || "Could not open settings. Please go to Android Settings → Privacy → Health Connect manually.");
+                                  }
+                                },
                               },
                             });
                           } else {

@@ -77,8 +77,10 @@ export async function openHealthConnectSettings(): Promise<void> {
   try {
     const HealthConnect = getHealthConnectPlugin();
     await HealthConnect.openHealthConnectSettings();
-  } catch {
-    // Fallback
+  } catch (e: any) {
+    console.error("[HealthConnect] openSettings failed:", e);
+    // Re-throw so caller can show a toast
+    throw e;
   }
 }
 
