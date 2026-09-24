@@ -1,26 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Copy, ClipboardPaste, GripVertical, Plus, RotateCcw, Trash2, X } from "lucide-react";
-import {
-  DndContext,
-  KeyboardSensor,
-  PointerSensor,
-  TouchSensor,
-  closestCenter,
-  useSensor,
-  useSensors,
-  type DragEndEvent,
-} from "@dnd-kit/core";
-import { restrictToParentElement, restrictToVerticalAxis } from "@dnd-kit/modifiers";
-import {
-  SortableContext,
-  arrayMove,
-  sortableKeyboardCoordinates,
-  useSortable,
-  verticalListSortingStrategy,
-} from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
+import { Copy, ClipboardPaste, Minus, Plus, RotateCcw, Trash2, X } from "lucide-react";
 import { useSettings, useTemplates } from "@/lib/kb-store";
 import { DEFAULT_TEMPLATES, type Exercise } from "@/lib/kb-types";
 import { Switch } from "@/components/ui/switch";
@@ -28,184 +9,45 @@ import { ImportPlanCard } from "@/components/kb/ImportPlanCard";
 import { BackupCard } from "@/components/kb/BackupCard";
 
 export const Route = createFileRoute("/settings")({
-  head: () => ({
-    meta: [
-      { title: "Templates & Settings — Kettlebell Longevity Tracker" },
-      {
-        name: "description",
-        content: "Edit kettlebell routines, sets, reps, loads and rest, and tune timer sound, haptics and tempo pacing.",
-      },
-      { property: "og:title", content: "Templates & Settings — Kettlebell Longevity Tracker" },
-      { property: "og:description", content: "Customise routines, loads, rest windows and feedback cues." },
-    ],
-  }),
   component: SettingsPage,
 });
 
-const numField =
-  "h-11 w-full rounded-lg border border-input bg-background px-3 text-base text-foreground outline-none focus:border-primary";
-
-function SortableExerciseRow({
-  exercise: e,
-  onPatch,
-  onRemove,
-  onCopy,
-}: {
-  exercise: Exercise;
-  onPatch: (patch: Partial<Exercise>) => void;
-  onRemove: () => void;
-  onCopy: () => void;
-}) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: e.id,
-  });
-
+function Btn({ children, onClick, primary = false, small = false }: { children: React.ReactNode; onClick?: () => void; primary?: boolean; small?: boolean }) {
   return (
-    <div
-      ref={setNodeRef}
-      style={{ transform: CSS.Transform.toString(transform), transition }}
-      className={`rounded-xl bg-background/50 p-3 ${
-        isDragging ? "z-10 shadow-xl shadow-black/40 ring-1 ring-primary/40" : ""
+    <button
+      onClick={onClick}
+      className={`${small ? "h-9 px-3 text-xs" : "h-11 px-4 text-sm"} rounded-lg font-semibold ${
+        primary ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"
       }`}
     >
-      <div className="mb-3 flex items-center gap-2">
-        <button
-          {...attributes}
-          {...listeners}
-          className="flex size-10 shrink-0 touch-none items-center justify-center rounded-lg text-muted-foreground active:bg-secondary"
-          aria-label={`Reorder ${e.name}`}
-        >
-          <GripVertical className="size-5" />
-        </button>
-        <input
-          value={e.name}
-          onChange={(ev) => onPatch({ name: ev.target.value })}
-          className="w-full bg-transparent font-display text-lg font-semibold text-foreground outline-none"
-        />
-      </div>
-      <div className="mb-3 flex gap-2">
-        {(["reps", "timed"] as const).map((k) => (
-          <button
-            key={k}
-            onClick={() =>
-              onPatch(
-                k === "timed"
-                  ? { kind: "timed", durationSec: e.durationSec ?? 120, sets: 1 }
-                  : { kind: "reps", sets: e.sets || 3, reps: e.reps || "10" },
-              )
-            }
-            className={`h-9 flex-1 rounded-lg text-sm font-semibold ${
-              e.kind === k
-                ? "bg-primary text-primary-foreground"
-                : "bg-secondary text-muted-foreground"
-            }`}
-          >
-            {k === "reps" ? "Reps" : "Timed"}
-          </button>
-        ))}
-      </div>
-      <div className="grid grid-cols-2 gap-3">
+      {children}
+    </button>
+  );
+}
 
-        {e.kind === "timed" ? (
-          <label className="text-xs text-muted-foreground">
-            Duration (s)
-            <input
-              type="number"
-              inputMode="numeric"
-              className={numField}
-              value={e.durationSec ?? 0}
-              onChange={(ev) => onPatch({ durationSec: Number(ev.target.value) })}
-            />
-          </label>
-        ) : (
-          <>
-            <label className="text-xs text-muted-foreground">
-              Sets
-              <input
-                type="number"
-                inputMode="numeric"
-                className={numField}
-                value={e.sets}
-                onChange={(ev) => onPatch({ sets: Math.max(1, Number(ev.target.value)) })}
-              />
-            </label>
-            <label className="text-xs text-muted-foreground">
-              Reps
-              <input
-                className={numField}
-                value={e.reps ?? ""}
-                onChange={(ev) => onPatch({ reps: ev.target.value })}
-              />
-            </label>
-          </>
-        )}
-        <label className="text-xs text-muted-foreground">
-          Weight (kg, blank = BW)
-          <input
-            type="number"
-            inputMode="decimal"
-            className={numField}
-            value={e.weightKg ?? ""}
-            onChange={(ev) =>
-              onPatch({ weightKg: ev.target.value === "" ? null : Number(ev.target.value) })
-            }
-          />
-        </label>
-        <label className="text-xs text-muted-foreground">
-          Rest (s)
-          <input
-            type="number"
-            inputMode="numeric"
-            className={numField}
-            value={e.restSec}
-            onChange={(ev) => onPatch({ restSec: Number(ev.target.value) })}
-          />
-        </label>
-      </div>
-      <div className="mt-3 flex items-center justify-between gap-3">
-        <label className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Switch checked={!!e.perSide} onCheckedChange={(v) => onPatch({ perSide: v })} />
-          Per side
-        </label>
-        <label className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Switch
-            checked={e.tempo === "3-1-3"}
-            onCheckedChange={(v) => onPatch({ tempo: v ? "3-1-3" : null })}
-          />
-          3-1-3 tempo
-        </label>
-        <div className="flex gap-2">
-          <button
-            onClick={onCopy}
-            className="flex size-10 items-center justify-center rounded-lg bg-secondary text-secondary-foreground"
-            aria-label={`Copy ${e.name}`}
-          >
-            <Copy className="size-4" />
-          </button>
-          <button
-            onClick={onRemove}
-            className="flex size-10 items-center justify-center rounded-lg bg-destructive/15 text-destructive"
-            aria-label="Remove exercise"
-          >
-            <Trash2 className="size-4" />
-          </button>
-        </div>
-      </div>
+function Segmented({ value, options, onChange }: { value: string; options: { value: string; label: string }[]; onChange: (v: string) => void }) {
+  return (
+    <div className="flex gap-1 rounded-lg bg-secondary p-1">
+      {options.map((o) => (
+        <button
+          key={o.value}
+          onClick={() => onChange(o.value)}
+          className={`flex-1 rounded-md py-1.5 text-xs font-semibold ${
+            value === o.value ? "bg-primary text-primary-foreground" : "text-muted-foreground"
+          }`}
+        >
+          {o.label}
+        </button>
+      ))}
     </div>
   );
 }
 
-function SettingsPage() {
+export function SettingsPage() {
   const [templates, setTemplates] = useTemplates();
   const [settings, setSettings] = useSettings();
   const [openId, setOpenId] = useState<string | null>(null);
   const [clipboard, setClipboard] = useState<Exercise | null>(null);
-
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 180, tolerance: 8 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
-  );
 
   const patchExercise = (tid: string, eid: string, patch: Partial<Exercise>) =>
     setTemplates((prev) =>
@@ -216,32 +58,6 @@ function SettingsPage() {
       ),
     );
 
-  const handleDragEnd = (tid: string) => (event: DragEndEvent) => {
-    const { active, over } = event;
-    if (!over || active.id === over.id) return;
-    setTemplates((prev) =>
-      prev.map((t) => {
-        if (t.id !== tid) return t;
-        const from = t.exercises.findIndex((e) => e.id === active.id);
-        const to = t.exercises.findIndex((e) => e.id === over.id);
-        if (from < 0 || to < 0) return t;
-        return { ...t, exercises: arrayMove(t.exercises, from, to) };
-      }),
-    );
-  };
-
-  const pasteInto = (tid: string) => {
-    if (!clipboard) return;
-    setTemplates((prev) =>
-      prev.map((t) =>
-        t.id === tid
-          ? { ...t, exercises: [...t.exercises, { ...clipboard, id: `${tid}-${Date.now()}` }] }
-          : t,
-      ),
-    );
-    toast.success(`${clipboard.name} pasted`);
-  };
-
   return (
     <div className="px-4 pt-8">
       <h1 className="font-display text-4xl font-bold uppercase">Templates</h1>
@@ -251,7 +67,6 @@ function SettingsPage() {
         <ImportPlanCard />
         <BackupCard />
       </div>
-
 
       <div className="mt-3 space-y-3">
         {templates.map((t) => (
@@ -268,54 +83,162 @@ function SettingsPage() {
             </button>
             {openId === t.id && (
               <div className="space-y-4 border-t border-border p-4">
-                <DndContext
-                  sensors={sensors}
-                  collisionDetection={closestCenter}
-                  modifiers={[restrictToVerticalAxis, restrictToParentElement]}
-                  onDragEnd={handleDragEnd(t.id)}
-                >
-                  <SortableContext
-                    items={t.exercises.map((e) => e.id)}
-                    strategy={verticalListSortingStrategy}
-                  >
-                    <div className="space-y-4">
-                      {t.exercises.map((e) => (
-                        <SortableExerciseRow
-                          key={e.id}
-                          exercise={e}
-                          onPatch={(patch) => patchExercise(t.id, e.id, patch)}
-                          onCopy={() => {
-                            setClipboard({ ...e });
-                            toast.success(`${e.name} copied`);
-                          }}
-                          onRemove={() =>
-                            setTemplates((prev) =>
-                              prev.map((tt) =>
-                                tt.id === t.id
-                                  ? { ...tt, exercises: tt.exercises.filter((x) => x.id !== e.id) }
-                                  : tt,
-                              ),
-                            )
-                          }
-                        />
-                      ))}
+                {t.exercises.map((e) => (
+                  <div key={e.id} className="rounded-xl bg-background/50 p-3">
+                    {/* Name (edit via prompt to avoid input freeze) */}
+                    <button
+                      onClick={() => {
+                        if (typeof (window as any).prompt === "function") {
+                          const name = (window as any).prompt("Exercise name:", e.name);
+                          if (name?.trim()) patchExercise(t.id, e.id, { name: name.trim() });
+                        }
+                      }}
+                      className="w-full text-left font-display text-lg font-semibold text-foreground active:opacity-70"
+                    >
+                      {e.name} <span className="text-xs font-normal text-muted-foreground">(tap to rename)</span>
+                    </button>
+
+                    {/* Kind toggle */}
+                    <div className="mt-2">
+                      <Segmented
+                        value={e.kind}
+                        options={[{ value: "reps", label: "Reps" }, { value: "timed", label: "Timed" }]}
+                        onChange={(k) =>
+                          patchExercise(t.id, e.id,
+                            k === "timed"
+                              ? { kind: "timed", durationSec: e.durationSec ?? 120, sets: 1 }
+                              : { kind: "reps", sets: e.sets || 3, reps: e.reps || "10" },
+                          )
+                        }
+                      />
                     </div>
-                  </SortableContext>
-                </DndContext>
+
+                    {/* Sets / Reps */}
+                    {e.kind === "reps" && (
+                      <div className="mt-3 flex items-center gap-3">
+                        <div className="flex items-center gap-1">
+                          <button onClick={() => patchExercise(t.id, e.id, { sets: Math.max(1, e.sets - 1) })} className="flex size-10 items-center justify-center rounded-lg bg-secondary text-secondary-foreground"><Minus className="size-4" /></button>
+                          <span className="w-8 text-center font-bold">{e.sets}</span>
+                          <button onClick={() => patchExercise(t.id, e.id, { sets: e.sets + 1 })} className="flex size-10 items-center justify-center rounded-lg bg-secondary text-secondary-foreground"><Plus className="size-4" /></button>
+                        </div>
+                        <span className="text-sm text-muted-foreground">sets</span>
+
+                        <div className="ml-4 flex items-center gap-1">
+                          <button onClick={() => patchExercise(t.id, e.id, { reps: String(Math.max(1, Number(e.reps || "10") - 1)) })} className="flex size-10 items-center justify-center rounded-lg bg-secondary text-secondary-foreground"><Minus className="size-4" /></button>
+                          <span className="w-8 text-center font-bold">{e.reps}</span>
+                          <button onClick={() => patchExercise(t.id, e.id, { reps: String((Number(e.reps || "10")) + 1) })} className="flex size-10 items-center justify-center rounded-lg bg-secondary text-secondary-foreground"><Plus className="size-4" /></button>
+                        </div>
+                        <span className="text-sm text-muted-foreground">reps</span>
+                      </div>
+                    )}
+
+                    {/* Duration for timed */}
+                    {e.kind === "timed" && (
+                      <div className="mt-3 flex items-center gap-1">
+                        <button onClick={() => patchExercise(t.id, e.id, { durationSec: Math.max(10, (e.durationSec ?? 120) - 10) })} className="flex size-10 items-center justify-center rounded-lg bg-secondary text-secondary-foreground"><Minus className="size-4" /></button>
+                        <span className="w-12 text-center font-bold">{e.durationSec ?? 120}s</span>
+                        <button onClick={() => patchExercise(t.id, e.id, { durationSec: (e.durationSec ?? 120) + 10 })} className="flex size-10 items-center justify-center rounded-lg bg-secondary text-secondary-foreground"><Plus className="size-4" /></button>
+                        <span className="text-sm text-muted-foreground">duration</span>
+                      </div>
+                    )}
+
+                    {/* Weight */}
+                    <div className="mt-3">
+                      <p className="mb-1 text-xs text-muted-foreground">Weight (kg)</p>
+                      <div className="flex flex-wrap gap-1">
+                        {["BW", 8, 12, 16, 20, 24, 28, 32].map((w) => (
+                          <button
+                            key={w}
+                            onClick={() => patchExercise(t.id, e.id, { weightKg: w === "BW" ? null : (w as number) })}
+                            className={`h-9 w-12 rounded-lg text-xs font-bold ${
+                              (w === "BW" && e.weightKg == null) || e.weightKg === w
+                                ? "bg-primary text-primary-foreground"
+                                : "bg-secondary text-muted-foreground"
+                            }`}
+                          >
+                            {w === "BW" ? "BW" : w}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Rest presets */}
+                    <div className="mt-3">
+                      <p className="mb-1 text-xs text-muted-foreground">Rest (s)</p>
+                      <div className="flex flex-wrap gap-1">
+                        {[0, 30, 45, 60, 75, 90, 120, 150, 180].map((s) => (
+                          <button
+                            key={s}
+                            onClick={() => patchExercise(t.id, e.id, { restSec: s })}
+                            className={`h-9 w-12 rounded-lg text-xs font-bold ${
+                              e.restSec === s
+                                ? "bg-primary text-primary-foreground"
+                                : "bg-secondary text-muted-foreground"
+                            }`}
+                          >
+                            {s}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Per-side toggle */}
+                    <button
+                      onClick={() => patchExercise(t.id, e.id, { perSide: !e.perSide })}
+                      className={`mt-3 flex h-10 w-full items-center justify-center gap-2 rounded-lg text-sm font-semibold ${
+                        e.perSide ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"
+                      }`}
+                    >
+                      {e.perSide ? "✓ Per side" : "Per side"}
+                    </button>
+
+                    {/* Actions */}
+                    <div className="mt-3 flex justify-end gap-2">
+                      <button
+                        onClick={() => { setClipboard({ ...e }); toast.success(`${e.name} copied`); }}
+                        className="flex size-10 items-center justify-center rounded-lg bg-secondary text-secondary-foreground"
+                      >
+                        <Copy className="size-4" />
+                      </button>
+                      <button
+                        onClick={() =>
+                          setTemplates((prev) =>
+                            prev.map((tt) =>
+                              tt.id === t.id
+                                ? { ...tt, exercises: tt.exercises.filter((x) => x.id !== e.id) }
+                                : tt,
+                            ),
+                          )
+                        }
+                        className="flex size-10 items-center justify-center rounded-lg bg-destructive/15 text-destructive"
+                      >
+                        <Trash2 className="size-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
 
                 {clipboard && (
                   <div className="flex gap-2">
                     <button
-                      onClick={() => pasteInto(t.id)}
+                      onClick={() => {
+                        setTemplates((prev) =>
+                          prev.map((tt) =>
+                            tt.id === t.id
+                              ? { ...tt, exercises: [...tt.exercises, { ...clipboard, id: `${t.id}-${Date.now()}` }] }
+                              : tt,
+                          ),
+                        );
+                        toast.success(`${clipboard.name} pasted`);
+                      }}
                       className="flex h-12 flex-1 items-center justify-center gap-2 rounded-xl border border-primary/40 bg-primary/10 px-3 text-sm font-semibold text-primary"
                     >
                       <ClipboardPaste className="size-4" />
-                      <span className="truncate">Paste “{clipboard.name}”</span>
+                      <span className="truncate">Paste "{clipboard.name}"</span>
                     </button>
                     <button
                       onClick={() => setClipboard(null)}
                       className="flex size-12 shrink-0 items-center justify-center rounded-xl border border-border text-muted-foreground"
-                      aria-label="Clear copied exercise"
                     >
                       <X className="size-4" />
                     </button>
@@ -352,7 +275,6 @@ function SettingsPage() {
                 >
                   <Plus className="size-4" /> Add exercise
                 </button>
-
               </div>
             )}
           </div>
@@ -382,23 +304,19 @@ function SettingsPage() {
         <div className="grid grid-cols-2 gap-3">
           <label className="text-xs text-muted-foreground">
             Light bell (kg)
-            <input
-              type="number"
-              inputMode="decimal"
-              className={numField}
-              value={settings.lightWeight}
-              onChange={(e) => setSettings({ ...settings, lightWeight: Number(e.target.value) })}
-            />
+            <div className="mt-1 flex items-center gap-1">
+              <button onClick={() => setSettings((p) => ({ ...p, lightWeight: Math.max(0, p.lightWeight - 0.5) }))} className="flex size-10 items-center justify-center rounded-lg bg-secondary text-secondary-foreground"><Minus className="size-4" /></button>
+              <span className="w-12 text-center font-bold">{settings.lightWeight}</span>
+              <button onClick={() => setSettings((p) => ({ ...p, lightWeight: p.lightWeight + 0.5 }))} className="flex size-10 items-center justify-center rounded-lg bg-secondary text-secondary-foreground"><Plus className="size-4" /></button>
+            </div>
           </label>
           <label className="text-xs text-muted-foreground">
             Heavy bell (kg)
-            <input
-              type="number"
-              inputMode="decimal"
-              className={numField}
-              value={settings.heavyWeight}
-              onChange={(e) => setSettings({ ...settings, heavyWeight: Number(e.target.value) })}
-            />
+            <div className="mt-1 flex items-center gap-1">
+              <button onClick={() => setSettings((p) => ({ ...p, heavyWeight: Math.max(0, p.heavyWeight - 0.5) }))} className="flex size-10 items-center justify-center rounded-lg bg-secondary text-secondary-foreground"><Minus className="size-4" /></button>
+              <span className="w-12 text-center font-bold">{settings.heavyWeight}</span>
+              <button onClick={() => setSettings((p) => ({ ...p, heavyWeight: p.heavyWeight + 0.5 }))} className="flex size-10 items-center justify-center rounded-lg bg-secondary text-secondary-foreground"><Plus className="size-4" /></button>
+            </div>
           </label>
         </div>
         {(

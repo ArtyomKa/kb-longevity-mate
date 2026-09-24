@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { toast } from "sonner";
-import { AlertTriangle, ClipboardCopy, Download, Link2, Upload } from "lucide-react";
+import { AlertTriangle, ClipboardPaste, Download, Link2, Upload } from "lucide-react";
 import { useSession, useSettings, useTemplates } from "@/lib/kb-store";
 import type { Template } from "@/lib/kb-types";
 import {
@@ -49,6 +49,34 @@ export function ImportPlanCard() {
   const copyCurrentPlan = async () => {
     await navigator.clipboard.writeText(serializePlan(templates));
     toast.success("Current plan copied as JSON");
+  };
+
+  const pasteFromClipboard = async () => {
+    try {
+      const Clipboard = (window as any).Capacitor?.Plugins?.Clipboard;
+      if (Clipboard) {
+        const result = await Clipboard.read();
+        const text = result.value || result.text || "";
+        if (!text.trim()) {
+          toast.error("Clipboard is empty");
+          return;
+        }
+        setRaw(text);
+        validate(text);
+        toast.success("Pasted from clipboard");
+        return;
+      }
+      if (typeof (window as any).prompt === "function") {
+        const text = (window as any).prompt("Paste plan JSON here:");
+        if (text?.trim()) {
+          setRaw(text);
+          validate(text);
+          toast.success("Pasted from clipboard");
+        }
+      }
+    } catch (e) {
+      toast.error("Could not read clipboard");
+    }
   };
 
   const affectsSession = (incoming: Template[]) =>
@@ -109,55 +137,56 @@ export function ImportPlanCard() {
               onClick={copyCurrentPlan}
               className="flex h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-secondary px-3 text-sm font-semibold text-secondary-foreground"
             >
-              <ClipboardCopy className="size-4" /> Copy current plan
+              <ClipboardPaste className="size-4" /> Copy current plan
             </button>
           </div>
           <p className="text-xs text-muted-foreground">
             Give the schema link to your AI coach and ask it to return JSON matching it.
           </p>
 
-          <textarea
-            value={raw}
-            onChange={(e) => {
-              setRaw(e.target.value);
-              setErrors([]);
-              setPreview(null);
+          {/* Hidden file input — never focused, only clicked programmatically */}
+          <input
+            ref={fileRef}
+            type="file"
+            accept="application/json,.json"
+            className="hidden"
+            tabIndex={-1}
+            onChange={async (e) => {
+              const file = e.target.files?.[0];
+              if (!file) return;
+              const text = await file.text();
+              setRaw(text);
+              validate(text);
+              e.target.value = "";
             }}
-            rows={8}
-            spellCheck={false}
-            placeholder='{ "version": 1, "templates": [ ... ] }'
-            className="w-full rounded-xl border border-input bg-background p-3 font-mono text-xs text-foreground outline-none focus:border-primary"
           />
 
-          <div className="flex gap-2">
-            <input
-              ref={fileRef}
-              type="file"
-              accept="application/json,.json"
-              className="hidden"
-              onChange={async (e) => {
-                const file = e.target.files?.[0];
-                if (!file) return;
-                const text = await file.text();
-                setRaw(text);
-                validate(text);
-                e.target.value = "";
-              }}
-            />
+          <div className="space-y-2">
             <button
               onClick={() => fileRef.current?.click()}
-              className="flex h-12 flex-1 items-center justify-center gap-2 rounded-xl border border-border text-sm font-semibold text-muted-foreground"
+              className="flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-border text-sm font-semibold text-muted-foreground"
             >
-              <Download className="size-4" /> Choose file
+              <Download className="size-4" /> Choose plan file
             </button>
             <button
-              onClick={() => validate(raw)}
-              disabled={!raw.trim()}
-              className="h-12 flex-1 rounded-xl bg-secondary text-sm font-semibold text-secondary-foreground disabled:opacity-40"
+              onClick={pasteFromClipboard}
+              className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-secondary text-sm font-semibold text-secondary-foreground"
             >
-              Preview
+              <ClipboardPaste className="size-4" /> Paste from clipboard
             </button>
           </div>
+
+          {raw && (
+            <div className="rounded-xl bg-background/50 p-3">
+              <p className="text-xs font-mono text-muted-foreground line-clamp-3">{raw.slice(0, 200)}{raw.length > 200 ? "…" : ""}</p>
+              <button
+                onClick={() => { setRaw(""); setPreview(null); setErrors([]); }}
+                className="mt-2 text-xs text-muted-foreground underline"
+              >
+                Clear
+              </button>
+            </div>
+          )}
 
           {errors.length > 0 && (
             <div className="rounded-xl bg-destructive/10 p-3">
