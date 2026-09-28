@@ -6,8 +6,8 @@ interface Props {
   seconds: number;
   sound: boolean;
   haptics: boolean;
-  /** called when the drill reaches 0:00 or the user stops early */
-  onComplete: () => void;
+  /** called when the drill reaches 0:00 or the user stops early, after the RPE step */
+  onComplete: (rpe: number | null) => void;
 }
 
 function fmt(sec: number) {
@@ -18,6 +18,7 @@ function fmt(sec: number) {
 
 export function DrillTimer({ seconds, sound, haptics, onComplete }: Props) {
   const [running, setRunning] = useState(false);
+  const [done, setDone] = useState(false);
   const [left, setLeft] = useState(seconds);
   const endAt = useRef(0);
   const onCompleteRef = useRef(onComplete);
@@ -33,9 +34,9 @@ export function DrillTimer({ seconds, sound, haptics, onComplete }: Props) {
       if (remaining <= 0) {
         window.clearInterval(id);
         setRunning(false);
+        setDone(true);
         if (sound) chime();
         if (haptics) buzz([120, 80, 120, 80, 240]);
-        onCompleteRef.current();
       }
     }, 250);
     return () => window.clearInterval(id);
@@ -44,11 +45,45 @@ export function DrillTimer({ seconds, sound, haptics, onComplete }: Props) {
 
   const stopEarly = () => {
     setRunning(false);
+    setDone(true);
     if (haptics) buzz(45);
-    onCompleteRef.current();
+  };
+
+  const finish = (rpe: number | null) => {
+    onCompleteRef.current(rpe);
   };
 
   const pct = seconds === 0 ? 0 : left / seconds;
+
+  if (done) {
+    return (
+      <div className="mt-4 rounded-2xl border border-primary/30 bg-card p-5">
+        <p className="text-center font-display text-xl font-bold uppercase text-primary">
+          Nice work
+        </p>
+        <p className="mt-1 text-center text-sm text-muted-foreground">
+          How hard was that? (RPE 1–10)
+        </p>
+        <div className="mt-3 flex gap-1">
+          {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
+            <button
+              key={n}
+              onClick={() => finish(n)}
+              className="h-11 flex-1 rounded-lg bg-muted text-sm font-bold text-muted-foreground active:bg-primary active:text-primary-foreground"
+            >
+              {n}
+            </button>
+          ))}
+        </div>
+        <button
+          onClick={() => finish(null)}
+          className="mt-3 h-11 w-full rounded-xl text-sm font-semibold text-muted-foreground"
+        >
+          Skip rating
+        </button>
+      </div>
+    );
+  }
 
   if (!running) {
     return (

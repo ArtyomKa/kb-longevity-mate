@@ -166,12 +166,13 @@ function WorkoutPage() {
         : s,
     );
 
-  const bump = (kind: "completed" | "skipped") => {
+  const bump = (kind: "completed" | "skipped", rpe?: number | null) => {
     if (!exercise) return;
     const current: Progress = progress[exercise.id] ?? emptyProgress();
     const next: Progress = {
       ...current,
       [kind]: current[kind] + 1,
+      rpe: rpe != null ? rpe : current.rpe,
       repsDone:
         kind === "completed" && exercise.kind === "reps"
           ? [...current.repsDone, current.repInput]
@@ -571,7 +572,7 @@ function WorkoutPage() {
                   seconds={exercise.durationSec ?? 60}
                   sound={settings.soundEnabled}
                   haptics={settings.hapticsEnabled}
-                  onComplete={() => bump("completed")}
+                  onComplete={(rpe) => bump("completed", rpe)}
                 />
               </div>
               <button
