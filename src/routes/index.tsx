@@ -572,10 +572,7 @@ function WorkoutPage() {
                   seconds={exercise.durationSec ?? 60}
                   sound={settings.soundEnabled}
                   haptics={settings.hapticsEnabled}
-                  onComplete={(rpe) => {
-                    if (rpe !== null) patchProgress(exercise.id, { rpe });
-                    bump("completed");
-                  }}
+                  onComplete={(rpe) => bump("completed", rpe)}
                 />
               </div>
               <button
