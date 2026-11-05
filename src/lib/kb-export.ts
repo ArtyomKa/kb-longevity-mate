@@ -44,7 +44,22 @@ export function buildWeeklyMarkdown(logs: WorkoutLog[], ref = new Date()) {
     return lines.join("\n");
   }
 
-  for (const log of week) {
+  for (const log of week) lines.push(...sessionBlock(log));
+
+  lines.push("---");
+  lines.push(
+    "Please review this week's kettlebell training for longevity: flag imbalance risks, suggest load progression, and note recovery concerns.",
+  );
+  return lines.join("\n");
+}
+
+export function buildSessionMarkdown(log: WorkoutLog) {
+  return sessionBlock(log).join("\n").trim();
+}
+
+function sessionBlock(log: WorkoutLog) {
+  const lines: string[] = [];
+  {
     lines.push(`## ${fmt(log.dateISO)} — ${log.templateName}`);
     lines.push(`Duration: ${Math.round(log.durationSec / 60)} min`);
     lines.push("");
@@ -70,12 +85,7 @@ export function buildWeeklyMarkdown(logs: WorkoutLog[], ref = new Date()) {
     lines.push(`- Joint/back notes: ${bf.jointNotes || "none"}`);
     lines.push("");
   }
-
-  lines.push("---");
-  lines.push(
-    "Please review this week's kettlebell training for longevity: flag imbalance risks, suggest load progression, and note recovery concerns.",
-  );
-  return lines.join("\n");
+  return lines;
 }
 
 export async function copyText(text: string) {
