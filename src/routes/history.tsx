@@ -3,7 +3,7 @@ import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { ClipboardCheck, Copy, Trash2 } from "lucide-react";
 import { useLogs } from "@/lib/kb-store";
-import { buildWeeklyMarkdown, copyText, logsThisWeek } from "@/lib/kb-export";
+import { buildSessionMarkdown, buildWeeklyMarkdown, copyText, logsThisWeek } from "@/lib/kb-export";
 
 export const Route = createFileRoute("/history")({
   head: () => ({
@@ -109,7 +109,7 @@ function HistoryPage() {
                   <div className="mt-4 flex gap-2">
                     <button
                       onClick={async () => {
-                        const ok = await copyText(buildWeeklyMarkdown([log], new Date(log.dateISO)));
+                        const ok = await copyText(buildSessionMarkdown(log));
                         toast[ok ? "success" : "error"](ok ? "Session copied" : "Clipboard blocked");
                       }}
                       className="flex h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-secondary font-semibold text-secondary-foreground"
